@@ -1,0 +1,1334 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mortimer Task Simulator — Wyrmscraig Slayer Master</title>
+<style>
+  :root{
+    --cave:#14100c;
+    --stone:#3e3529;
+    --stone-lt:#4a4033;
+    --stone-dk:#2b2419;
+    --bevel-lt:#5d5240;
+    --bevel-dk:#191510;
+    --gold:#ffb83f;
+    --gold-dk:#c9962b;
+    --osrs-yellow:#ffff00;
+    --parch:#d8ccb4;
+    --parch-dim:#a89a80;
+    --ember:#c0392b;
+    --green:#7fbf4d;
+    --cyan:#65c8c8;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html{-webkit-text-size-adjust:100%}
+  body{
+    background:var(--cave);
+    background-image:
+      radial-gradient(ellipse 80% 50% at 50% -10%, rgba(192,90,30,.10), transparent 60%),
+      radial-gradient(ellipse 60% 40% at 85% 100%, rgba(80,60,120,.08), transparent 60%);
+    color:var(--parch);
+    font-family:Verdana, Geneva, sans-serif;
+    font-size:13px;
+    line-height:1.5;
+    min-height:100vh;
+    padding:18px 14px 60px;
+  }
+  .wrap{max-width:980px;margin:0 auto}
+
+  /* ---------- OSRS panel chrome ---------- */
+  .panel{
+    background:linear-gradient(180deg, var(--stone-lt), var(--stone) 30%, var(--stone-dk));
+    border:2px solid var(--bevel-dk);
+    box-shadow:
+      inset 0 0 0 1px var(--bevel-lt),
+      inset 0 0 0 3px var(--bevel-dk),
+      inset 0 0 0 4px rgba(93,82,64,.5),
+      0 4px 14px rgba(0,0,0,.6);
+    border-radius:3px;
+    padding:16px;
+  }
+  h1,h2,h3,.disp{
+    font-family:'Book Antiqua', Palatino, 'Palatino Linotype', Georgia, serif;
+    letter-spacing:.03em;
+  }
+  header{text-align:center;margin-bottom:20px}
+  header .eyebrow{
+    font-size:11px;letter-spacing:.35em;text-transform:uppercase;color:var(--parch-dim);
+  }
+  header h1{
+    font-size:clamp(30px,6vw,44px);
+    color:var(--gold);
+    text-shadow:2px 2px 0 #000, 0 0 24px rgba(255,150,40,.25);
+    font-variant:small-caps;
+    line-height:1.1;
+  }
+  header .sub{color:var(--parch-dim);font-size:12px;margin-top:6px}
+  header .sub a{color:var(--cyan)}
+
+  .grid{display:grid;grid-template-columns:290px 1fr;gap:16px;align-items:start}
+  @media(max-width:820px){.grid{grid-template-columns:1fr}}
+
+  /* ---------- settings ---------- */
+  .panel h2{
+    color:var(--gold);font-size:17px;font-variant:small-caps;
+    text-shadow:1px 1px 0 #000;
+    border-bottom:1px solid var(--bevel-dk);
+    box-shadow:0 1px 0 rgba(93,82,64,.5);
+    padding-bottom:6px;margin-bottom:12px;
+  }
+  .field{margin-bottom:14px}
+  .field label{display:block;font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--parch-dim);margin-bottom:4px}
+  .field input[type=number]{
+    width:100%;background:#100d09;border:1px solid var(--bevel-dk);
+    box-shadow:inset 0 0 0 1px rgba(93,82,64,.4);
+    color:var(--osrs-yellow);font-family:inherit;font-size:14px;padding:6px 8px;border-radius:2px;
+  }
+  .field input[type=number]:focus{outline:2px solid var(--gold-dk);outline-offset:1px}
+  .checkline{display:flex;gap:8px;align-items:center;font-size:12px;color:var(--parch)}
+  .checkline input{accent-color:var(--gold-dk);width:16px;height:16px}
+  select{
+    width:100%;background:#100d09;border:1px solid var(--bevel-dk);color:var(--parch);
+    font-family:inherit;font-size:12px;padding:5px 6px;border-radius:2px;
+  }
+  .unlocks{font-size:11px;line-height:1.8;color:var(--parch-dim)}
+  .unlocks .on{color:var(--green)}
+  .unlocks .off{color:#6b5f4c;text-decoration:line-through}
+  .pts{
+    margin-top:6px;font-size:12px;color:var(--parch);
+    display:flex;justify-content:space-between;align-items:center;
+  }
+  .pts b{color:var(--osrs-yellow);font-size:15px}
+
+  /* ---------- buttons ---------- */
+  button{
+    font-family:'Book Antiqua', Palatino, Georgia, serif;
+    font-variant:small-caps;letter-spacing:.04em;
+    font-size:15px;cursor:pointer;border-radius:3px;
+    border:2px solid var(--bevel-dk);
+    background:linear-gradient(180deg,#6e5c3a,#4c3f27 45%,#3a3020);
+    color:var(--gold);
+    text-shadow:1px 1px 0 #000;
+    box-shadow:inset 0 1px 0 rgba(255,220,150,.25), inset 0 -2px 0 rgba(0,0,0,.35);
+    padding:8px 16px;
+    transition:filter .1s, transform .05s;
+  }
+  button:hover{filter:brightness(1.15)}
+  button:active{transform:translateY(1px)}
+  button:disabled{opacity:.45;cursor:not-allowed;filter:none}
+  button.primary{
+    background:linear-gradient(180deg,#a3752c,#7c5a1e 45%,#5c421a);
+    color:#fff3d6;
+  }
+  button.danger{background:linear-gradient(180deg,#7c3428,#5a251c 45%,#421a14);color:#ffc9b8}
+  button.small{font-size:13px;padding:5px 10px}
+  .btnrow{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+
+  /* ---------- task cards ---------- */
+  .offers{display:grid;gap:10px;grid-template-columns:repeat(auto-fit,minmax(185px,1fr));margin-top:12px}
+  .card{
+    background:linear-gradient(180deg,#262019,#1c1712);
+    border:2px solid var(--bevel-dk);
+    box-shadow:inset 0 0 0 1px rgba(93,82,64,.45);
+    border-radius:3px;padding:12px;
+    display:flex;flex-direction:column;gap:8px;
+    position:relative;
+  }
+  .card .lvl{font-size:10px;letter-spacing:.15em;text-transform:uppercase;color:var(--parch-dim)}
+  .card .name{
+    font-family:'Book Antiqua', Palatino, Georgia, serif;
+    font-variant:small-caps;font-size:20px;color:var(--osrs-yellow);
+    text-shadow:1px 1px 0 #000;line-height:1.1;
+  }
+  .card .qty{font-size:13px}
+  .card .qty b{color:#fff}
+  .card .qty .adj{font-size:11px;color:var(--parch-dim)}
+  .card .bracelet-note{font-size:10.5px;color:var(--cyan);margin-top:1px}
+  .mod{
+    border-radius:2px;padding:6px 8px;font-size:11.5px;line-height:1.4;
+    border:1px solid var(--bevel-dk);
+    background:rgba(0,0,0,.35);
+  }
+  .mod .modname{display:block;font-size:10px;letter-spacing:.12em;text-transform:uppercase;margin-bottom:1px}
+  .mod.points .modname{color:var(--osrs-yellow)}
+  .mod.quantity .modname{color:var(--cyan)}
+  .mod.clue .modname{color:#e2a5ff}
+  .mod.xp .modname{color:var(--green)}
+  .mod.superior .modname{color:#ff8a5c}
+  .mod .modval{color:#fff;font-size:14px;font-family:'Book Antiqua', Palatino, Georgia, serif}
+  .stats{
+    border:1px solid var(--bevel-dk);border-radius:2px;
+    background:rgba(0,0,0,.25);padding:6px 8px;font-size:11px;
+  }
+  .stats div{display:flex;justify-content:space-between;gap:6px}
+  .stats span{color:var(--parch-dim);white-space:nowrap}
+  .stats b{color:#fff;font-weight:normal;text-align:right}
+  .stats .heartboost{color:#ff8a5c !important}
+
+  /* ---------- top-rated (highest Elo) card ---------- */
+  @keyframes tp-glow{
+    0%,100%{box-shadow:0 0 8px rgba(255,184,63,.35), inset 0 0 0 1px rgba(255,184,63,.5)}
+    50%{box-shadow:0 0 20px rgba(255,184,63,.65), inset 0 0 0 1px rgba(255,220,140,.8)}
+  }
+  @keyframes glow-fast{0%,100%{box-shadow:0 0 7px rgba(94,199,208,.22), inset 0 0 12px rgba(94,199,208,.05)}50%{box-shadow:0 0 16px rgba(94,199,208,.55), inset 0 0 16px rgba(94,199,208,.1)}}
+  @keyframes glow-elite{0%,100%{box-shadow:0 0 8px rgba(180,140,230,.28), inset 0 0 14px rgba(180,140,230,.06)}50%{box-shadow:0 0 18px rgba(180,140,230,.6), inset 0 0 18px rgba(180,140,230,.12)}}
+  .card.fast-pick{border-color:var(--cyan);animation:glow-fast 2.2s ease-in-out infinite;padding-top:30px}
+  .card.elite-pick{border-color:#b48ce6;animation:glow-elite 2.2s ease-in-out infinite;padding-top:30px}
+  .flag-strip{
+    position:absolute;top:0;left:0;right:0;text-align:center;
+    font-size:10.5px;letter-spacing:.16em;padding:3px 0;
+    font-variant:small-caps;font-family:'Book Antiqua',Palatino,Georgia,serif;
+    border-radius:1px 1px 0 0;
+  }
+  .fast-strip{background:linear-gradient(180deg,#8fdce4,#4fb3bd);color:#0e1a1c}
+  .elite-strip{background:linear-gradient(180deg,#d7bdf5,#9a6dd4);color:#1a0e24}
+
+  /* ---------- Elo ranking list ---------- */
+  .elo-list{font-size:11px;max-height:220px;overflow-y:auto;line-height:1.75}
+  .elo-list .row{display:flex;gap:6px;align-items:baseline}
+  .elo-list .rk{width:18px;color:var(--parch-dim);text-align:right;flex-shrink:0}
+  .elo-list .nm{flex:1;color:var(--parch);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .elo-list .ev{color:var(--osrs-yellow);font-family:'Book Antiqua',Palatino,Georgia,serif}
+  .elo-list .row:nth-child(1) .nm, .elo-list .row:nth-child(1) .ev{color:var(--gold)}
+  .elo-list .elo-inp{width:58px;background:#100d09;border:1px solid var(--bevel-dk);color:var(--osrs-yellow);font-family:inherit;font-size:11px;padding:1px 4px;border-radius:2px;text-align:right}
+  .unlocks-inline{margin:-6px 0 14px}
+  body:not(.advanced) .adv-only{display:none !important}
+  .mode-toggle{display:flex;align-items:center;gap:6px;margin-bottom:12px;padding-bottom:10px;border-bottom:1px solid var(--bevel-dk)}
+  .mode-toggle label{margin:0;font-size:12px;color:var(--parch);text-transform:none;letter-spacing:0;cursor:pointer}
+  .eadj-up{color:var(--green)}
+  .eadj-dn{color:#e98b7a}
+  .skip-rec{
+    margin-top:12px;padding:10px 12px;border-radius:3px;font-size:12px;line-height:1.5;
+    border:2px solid #7c3428;color:#f0c5b5;
+    background:linear-gradient(180deg, rgba(124,52,40,.25), rgba(0,0,0,.3));
+  }
+  .skip-rec b{color:#ff9d82;font-variant:small-caps;font-family:'Book Antiqua',Palatino,Georgia,serif;font-size:14px}
+  @keyframes attn-pulse{0%,100%{filter:brightness(1)}50%{filter:brightness(1.45)}}
+  button.attn{animation:attn-pulse 1.2s ease-in-out infinite}
+
+  /* ---------- ledger & sim tables ---------- */
+  .ledger-tbl{width:100%;border-collapse:collapse;font-size:11px}
+  .ledger-tbl th{color:var(--parch-dim);text-transform:uppercase;font-size:9.5px;letter-spacing:.08em;text-align:left;padding:3px 6px;border-bottom:1px solid var(--bevel-dk)}
+  .ledger-tbl td{padding:3px 6px;border-bottom:1px solid rgba(0,0,0,.25);color:var(--parch)}
+  .ledger-tbl td:first-child{color:var(--osrs-yellow)}
+  .ledger-tbl tr.tot td{border-top:1px solid var(--gold-dk);color:var(--gold);font-family:'Book Antiqua',Palatino,Georgia,serif}
+  #simResults{margin-top:12px}
+  .sim-head{font-size:11px;color:var(--gold);font-variant:small-caps;font-family:'Book Antiqua',Palatino,Georgia,serif;font-size:14px;text-shadow:1px 1px 0 #000;margin-bottom:6px}
+  .sim-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:6px}
+  .sim-grid div{background:rgba(0,0,0,.3);border:1px solid var(--bevel-dk);border-radius:2px;padding:5px 8px;font-size:11px}
+  .sim-grid span{display:block;color:var(--parch-dim);font-size:9.5px;text-transform:uppercase;letter-spacing:.08em}
+  .sim-grid b{color:#fff;font-size:13px}
+  .sim-grid b.net-neg{color:#e98b7a}
+
+  /* ---------- editors (weights / rates) ---------- */
+  .rates-ed{margin-top:8px;font-size:11px}
+  .rates-ed summary{cursor:pointer;color:var(--cyan);font-size:11px}
+  .rates-ed > div{max-height:180px;overflow-y:auto;margin-top:6px}
+  .wt-row{display:flex;align-items:center;gap:6px;margin-bottom:3px}
+  .wt-row span{flex:1;color:var(--parch);font-size:10.5px}
+  .wt-row input{width:64px;background:#100d09;border:1px solid var(--bevel-dk);color:var(--osrs-yellow);font-family:inherit;font-size:11px;padding:2px 4px;border-radius:2px}
+  .method-sel{background:#100d09;border:1px solid var(--bevel-dk);color:var(--parch);font-family:inherit;font-size:10px;padding:1px 2px;border-radius:2px;max-width:125px}
+  .zone-label{
+    font-size:10px;letter-spacing:.28em;text-transform:uppercase;color:var(--gold-dk);
+    margin-bottom:8px;padding-bottom:4px;border-bottom:1px dashed rgba(201,150,43,.35);
+  }
+  .stat-strip{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:8px}
+  .stat-strip div{background:rgba(0,0,0,.3);border:1px solid var(--bevel-dk);border-radius:2px;padding:6px 10px}
+  .stat-strip span{display:block;font-size:9.5px;text-transform:uppercase;letter-spacing:.08em;color:var(--parch-dim)}
+  .stat-strip b{color:var(--osrs-yellow);font-size:16px;font-family:'Book Antiqua',Palatino,Georgia,serif;white-space:nowrap}
+  .stat-strip .perhr{font-size:10px;color:var(--parch-dim);margin-top:1px}
+  .card .pick{margin-top:auto}
+
+  /* ---------- current task ---------- */
+  .current{
+    margin-top:14px;padding:12px;border:2px solid var(--gold-dk);border-radius:3px;
+    background:linear-gradient(180deg, rgba(160,120,40,.12), rgba(0,0,0,.25));
+  }
+  .current .name{color:var(--gold);font-size:18px;font-variant:small-caps;font-family:'Book Antiqua',Palatino,Georgia,serif;text-shadow:1px 1px 0 #000}
+  .current .meta{font-size:12px;margin-top:2px}
+
+  /* ---------- completion banner ---------- */
+  @keyframes cb-pop{
+    0%{transform:scale(.7);opacity:0}
+    55%{transform:scale(1.06);opacity:1}
+    100%{transform:scale(1)}
+  }
+  @keyframes cb-glow{
+    0%,100%{box-shadow:0 0 12px rgba(255,180,60,.25), inset 0 0 0 2px var(--gold-dk)}
+    50%{box-shadow:0 0 30px rgba(255,180,60,.55), inset 0 0 0 2px var(--gold)}
+  }
+  @keyframes cb-rise{
+    from{transform:translateY(8px);opacity:0}
+    to{transform:translateY(0);opacity:1}
+  }
+  .complete-banner{
+    margin-top:14px;padding:16px;text-align:center;border-radius:3px;
+    border:2px solid var(--gold-dk);
+    background:linear-gradient(180deg, rgba(180,130,40,.18), rgba(0,0,0,.3));
+    animation:cb-pop .45s cubic-bezier(.2,1.4,.4,1), cb-glow 1.5s ease-in-out;
+  }
+  .cb-title{
+    font-family:'Book Antiqua',Palatino,Georgia,serif;font-variant:small-caps;
+    font-size:26px;color:var(--gold);text-shadow:2px 2px 0 #000, 0 0 18px rgba(255,170,50,.5);
+  }
+  .cb-task{
+    font-family:'Book Antiqua',Palatino,Georgia,serif;font-variant:small-caps;
+    font-size:15px;color:var(--osrs-yellow);text-shadow:1px 1px 0 #000;margin-top:2px;
+  }
+  .cb-rewards{margin-top:8px;display:flex;gap:14px;justify-content:center;flex-wrap:wrap;font-size:12px}
+  .cb-rewards span{color:var(--green);animation:cb-rise .5s ease .25s both}
+  .cb-rewards span:nth-child(2){animation-delay:.4s}
+  .cb-rewards span:nth-child(3){animation-delay:.55s}
+
+  /* ---------- dialogue box (signature) ---------- */
+  .dialogue{
+    margin-top:16px;
+    background:linear-gradient(180deg,#e8ddc3,#d8ccb4 30%,#c4b596);
+    border:2px solid #5d4a2a;
+    box-shadow:inset 0 0 0 2px #8a744c, inset 0 0 0 3px #3a2f1c, 0 4px 12px rgba(0,0,0,.5);
+    border-radius:3px;
+    padding:12px 16px;
+    color:#2a2014;
+  }
+  .dialogue .speaker{
+    font-family:'Book Antiqua', Palatino, Georgia, serif;
+    font-variant:small-caps;font-weight:bold;color:#7a1010;font-size:15px;
+    text-align:center;margin-bottom:2px;
+  }
+  .dialogue .line{text-align:center;font-size:13px;font-style:italic}
+
+  .log{font-size:11px;color:var(--parch-dim);max-height:180px;overflow-y:auto;line-height:1.7}
+  .log .good{color:var(--green)} .log .bad{color:#e98b7a} .log .gold{color:var(--gold)}
+
+  footer{margin-top:26px;text-align:center;font-size:10.5px;color:#6b5f4c;line-height:1.7}
+  footer a{color:#8f9fae}
+  .blockrow{display:flex;gap:6px;margin-bottom:8px;align-items:center}
+  .blockrow button{flex-shrink:0}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="eyebrow">Wyrmscraig Caverns</div>
+    <h1>Mortimer</h1>
+    <div class="sub">Slayer task simulator &middot; numbers from the official “Meet Mortimer” news post (24 July 2026). Unofficial fan tool.</div>
+  </header>
+
+  <div class="grid">
+    <!-- ============ 1 · SETTINGS ============ -->
+    <aside class="panel">
+      <div class="zone-label">1 · Settings</div>
+      <div class="mode-toggle">
+        <input type="checkbox" id="advToggle">
+        <label for="advToggle">Advanced mode</label>
+      </div>
+      <h2>Your Slayer Record</h2>
+      <div class="field">
+        <label for="slayerLvl">Slayer level (70+; 99 bypasses combat)</label>
+        <input type="number" id="slayerLvl" min="1" max="99" value="95">
+      </div>
+      <div class="field">
+        <label for="tasksDone">Mortimer tasks completed</label>
+        <input type="number" id="tasksDone" min="0" max="10000" value="0">
+      </div>
+      <div class="unlocks-inline">
+        <div class="unlocks" id="unlockList"></div>
+      </div>
+      <div class="field checkline">
+        <input type="checkbox" id="venators" checked>
+        <label for="venators" style="margin:0;text-transform:none;letter-spacing:0;font-size:12px;color:var(--parch)">Blood Moon Rises (unlocks Venators)</label>
+      </div>
+      <div class="field checkline adv-only">
+        <input type="checkbox" id="fastToggle" checked>
+        <label for="fastToggle" style="margin:0;text-transform:none;letter-spacing:0;font-size:12px;color:var(--parch)">⚡ Fast tasks &amp; skip suggestions</label>
+      </div>
+      <div class="field checkline adv-only">
+        <input type="checkbox" id="eliteCA" checked>
+        <label for="eliteCA" style="margin:0;text-transform:none;letter-spacing:0;font-size:12px;color:var(--parch)">Elite CA rewards (1/150 superiors)</label>
+      </div>
+      <div class="field checkline adv-only">
+        <input type="checkbox" id="braceletExp" checked>
+        <label for="braceletExp" style="margin:0;text-transform:none;letter-spacing:0;font-size:12px;color:var(--parch)">Expeditious bracelets (×0.8 kills)</label>
+      </div>
+      <div class="field checkline adv-only">
+        <input type="checkbox" id="braceletSla" checked>
+        <label for="braceletSla" style="margin:0;text-transform:none;letter-spacing:0;font-size:12px;color:var(--parch)">Slaughter bracelets (×4/3 kills)</label>
+      </div>
+      <div class="field adv-only">
+        <label for="methodPref">Kill method assumption</label>
+        <select id="methodPref">
+          <option value="best">Best (AoE/Cannon/Venator)</option>
+          <option value="no_cannon">Standard &amp; AoE (no Cannon)</option>
+          <option value="standard">Standard combat only</option>
+        </select>
+      </div>
+      <details class="rates-ed adv-only">
+        <summary>Edit kill rates (kills/hr)</summary>
+        <div id="ratesTable"></div>
+        <div style="font-size:10px;color:var(--parch-dim);margin-top:4px">Community-correctable estimates. Edits persist and feed every time/XP calculation.</div>
+      </details>
+      <details class="rates-ed adv-only">
+        <summary>Elo modifier weights</summary>
+        <div class="wt-grid" id="weightsGrid"></div>
+        <div style="font-size:10px;color:var(--parch-dim);margin-top:4px">Controls how each Mortifier adjusts a card's effective Elo.</div>
+      </details>
+      <details class="rates-ed adv-only">
+        <summary>Simulations</summary>
+        <div class="wt-grid">
+          <div class="wt-row"><span>Good heart pace, ≤ h/heart</span><input type="number" id="simHeartMax" value="75" min="1" step="5"></div>
+          <div class="wt-row"><span>Fast task, ≤ minutes</span><input type="number" id="simFastMin" value="16" min="0.5" step="0.5"></div>
+        </div>
+        <div style="font-size:10px;color:var(--parch-dim);margin-top:4px">Thresholds for the bulk simulation's task policy: what counts as a good heart pace, and how quick a task must be to clear instead of skipping.</div>
+      </details>
+      <details class="rates-ed adv-only">
+        <summary>Task Elos</summary>
+        <div style="font-size:10.5px;color:var(--osrs-yellow);margin:4px 0" id="eloSource"></div>
+        <div class="elo-list" id="eloList"></div>
+        <button class="small" id="eloDefaultsBtn" style="margin-top:6px">Restore defaults</button>
+        <div style="font-size:10px;color:var(--parch-dim);margin-top:4px">Ratings drift automatically as you choose tasks: your pick "beats" the rejected offers, and upsets move scores further. Edit any value directly. Skip suggestions and the ◆ S-Tier flag use these plus the Mortifier weights above.</div>
+      </details>
+
+      <h2 style="margin-top:14px">Block Slots <span style="font-size:11px;color:var(--parch-dim)">(2 max, 120 pts each)</span></h2>
+      <div id="blocks"></div>
+    </aside>
+
+    <!-- ============ MAIN COLUMN ============ -->
+    <main>
+      <!-- ============ 2 · SESSION ============ -->
+      <section class="panel">
+        <div class="zone-label">2 · Session</div>
+        <h2>Task Assignment</h2>
+        <div id="offerIntro" style="font-size:12px;color:var(--parch-dim)">Speak with Mortimer to receive your choice of assignments.<br>Every task carries a guaranteed modifier: a <i>Mortifier</i>, if you will.</div>
+        <div id="skipRec" class="skip-rec" style="display:none"></div>
+        <div class="offers" id="offers"></div>
+        <div class="btnrow">
+          <button class="primary" id="rollBtn">Get assignments</button>
+          <button class="danger" id="skipBtn" disabled>Skip set (−100 pts)</button>
+        </div>
+        <div id="currentWrap"></div>
+      </section>
+
+      <section class="panel" style="margin-top:16px">
+        <h2>Session Totals</h2>
+        <div class="stat-strip">
+          <div><span>Total Time</span><b id="timeVal">0 min</b><div class="perhr" id="timeHr">—</div></div>
+          <div><span>Slayer Points</span><b id="ptsVal">1000 (+0)</b><div class="perhr" id="ptsHr">—</div></div>
+          <div><span>Slayer XP Earned</span><b id="xpVal">0</b><div class="perhr" id="xpHr">—</div></div>
+          <div><span>Imbued Hearts</span><b id="heartsVal">0.0000</b><div class="perhr" id="heartsHr">—</div></div>
+        </div>
+        <div style="font-size:10.5px;color:var(--parch-dim);margin-top:6px">Skip = 100 pts &middot; Block = 120 pts; points are only earned from Point Bounty rolls.<br>Hearts sum each task's expectation. At 1.0 you'd hold one heart on average.</div>
+
+
+      </section>
+
+      <section class="panel adv-only" style="margin-top:16px">
+        <h2>Time Ledger <span style="font-size:11px;color:var(--parch-dim)">(completed tasks by monster)</span></h2>
+        <div id="ledger"></div>
+      </section>
+
+      <div class="dialogue">
+        <div class="speaker">Mortimer</div>
+        <div class="line" id="mortLine">Ah, a slayer. Back in my day we didn't get to <i>choose</i>. Count yourself lucky.</div>
+      </div>
+
+      <!-- ============ 3 · SIMULATIONS ============ -->
+      <section class="panel adv-only" style="margin-top:16px">
+        <div class="zone-label">3 · Simulations</div>
+        <h2>Bulk Simulation</h2>
+        <div style="font-size:12px;color:var(--parch-dim)">Runs a hypothetical streak from a fresh 0-task record, unlocking modifiers along the way. Picks the best hearts/hour offer when one is on a good pace; otherwise clears the fastest trivial task; otherwise skips (thresholds under Simulations in Settings). This has no effect on your session.</div>
+        <div class="btnrow">
+          <button id="simBtn100">Simulate 100</button>
+          <button id="simBtn">Simulate 1,000</button>
+          <button id="simBtn10k">Simulate 10,000</button>
+        </div>
+        <div id="simResults"></div>
+      </section>
+
+      <!-- ============ 4 · PERSISTENCE ============ -->
+      <section class="panel adv-only" style="margin-top:16px">
+        <div class="zone-label">4 · Persistence</div>
+        <h2>Save Data</h2>
+        <div class="btnrow" style="margin-top:6px">
+          <button class="small danger" id="resetBtn">Reset</button>
+        </div>
+        <div style="font-size:10px;color:var(--parch-dim);margin-top:4px" id="saveNote"></div>
+
+        <h2 style="margin-top:14px">Log</h2>
+        <div class="log" id="log"></div>
+      </section>
+    </main>
+  </div>
+
+  <footer>
+    Task pool, weightings, quantities and modifier rules are from Jagex's news post
+    <a href="https://secure.runescape.com/m=news/meet-mortimer-your-newest-slayer-master?oldschool=1" target="_blank" rel="noopener">“Meet Mortimer: Your Newest Slayer Master”</a> (24 Jul 2026, revised 27 Jul).
+    Default task ratings and kill speeds follow <a href="https://docs.google.com/spreadsheets/d/1izFsogwL-a2exDaxewWsr0AepMsAgPvmisScFcquLIE/edit?gid=1827748524" target="_blank" rel="noopener">Travag's pre-release Mortimer spreadsheet</a> (grades mapped to Elo; kills/hr from average quantity ÷ task time), assume high-level gear, and are editable in Settings.
+    Imbued heart odds use each superior's exact drop rate from the wiki's <a href="https://oldschool.runescape.wiki/w/Imbued_heart" target="_blank" rel="noopener">Imbued heart</a> page (requires Bigger &amp; Badder; superior spawns at 1/150 with the elite CA setting on, 1/200 otherwise).
+    Clue estimates assume a 1/128 base rate.
+    Bracelet toggles apply Expeditious (×0.8 actual kills) to tasks where fewer kills is preferable and Slaughter (×4/3) where more is, per their wiki effects.<br>Not affiliated with Jagex. Old School RuneScape © Jagex Ltd.
+  </footer>
+</div>
+
+<script>
+// ---- Task pool from the 24 July 2026 news post ----
+// q = [assignMin, assignMax]; mods: qty (flat), pts, clue %, xp %, sup % ; null = N/A
+// xpk = slayer XP per kill; kph/aoe/cannon = kills/hour derived from OSRS Wiki Slayer training XP/hr rates (kph = XPhr / xpk)
+const POOL = [
+  {lvl:5,  name:"Crawling Hands",     w:10, q:[35,50],   ext:false, qty:[-30,-15], pts:[5,15],  clue:null,     xp:[25,100],  sup:[50,100],  xpk:8,   kph:1530},
+  {lvl:10, name:"Cave Crawlers",      w:10, q:[35,50],   ext:false, qty:[-30,-15], pts:[5,15],  clue:null,     xp:[25,100],  sup:[50,100],  xpk:22,  kph:900},
+  {lvl:15, name:"Banshees",           w:10, q:[35,50],   ext:false, qty:[-30,-15], pts:[5,15],  clue:[75,150], xp:[25,100],  sup:[50,100],  xpk:22,  kph:825},
+  {lvl:20, name:"Rockslugs",          w:10, q:[35,50],   ext:false, qty:[-30,-15], pts:[5,15],  clue:null,     xp:[25,100],  sup:[50,100],  xpk:27,  kph:955},
+  {lvl:25, name:"Cockatrice",         w:10, q:[35,50],   ext:false, qty:[-30,-15], pts:[5,15],  clue:[75,150], xp:[25,100],  sup:[50,100],  xpk:37,  kph:680},
+  {lvl:30, name:"Pyrefiends",         w:10, q:[35,50],   ext:false, qty:[-30,-15], pts:[5,15],  clue:[75,150], xp:[25,100],  sup:[50,100],  xpk:45,  kph:765},
+  {lvl:45, name:"Infernal Mages",     w:10, q:[35,50],   ext:false, qty:[-30,-15], pts:[5,15],  clue:null,     xp:[25,100],  sup:[50,100],  xpk:75,  kph:535},
+  {lvl:50, name:"Bloodvelds",         w:8,  q:[120,180], ext:true,  qty:[50,100],  pts:[10,15], clue:[35,75],  xp:[5,15],    sup:[100,150], xpk:120, kph:500},
+  {lvl:51, name:"Gryphons",           w:10, q:[80,120],  ext:true,  qty:[50,100],  pts:[10,25], clue:[75,150], xp:[20,50],   sup:[100,150], xpk:130, kph:350, est:true},
+  {lvl:52, name:"Jellies",            w:10, q:[80,120],  ext:false, qty:[50,100],  pts:[10,15], clue:[35,75],  xp:[10,25],   sup:[100,150], xpk:75,  kph:250, aoe:665},
+  {lvl:54, name:"Custodian Stalkers", w:8,  q:[80,120],  ext:true,  qty:[50,100],  pts:[10,15], clue:null,     xp:[10,25],   sup:[100,150], xpk:110, kph:200, aoe:350, est:true},
+  {lvl:55, name:"Turoth",             w:10, q:[80,120],  ext:false, qty:[30,80],   pts:[15,30], clue:[75,150], xp:[35,75],   sup:[200,300], xpk:76,  kph:335},
+  {lvl:56, name:"Warped Creatures",   w:10, q:[80,120],  ext:false, qty:[50,100],  pts:[15,30], clue:[75,150], xp:[35,75],   sup:[200,300], xpk:70,  kph:200},
+  {lvl:58, name:"Cave Horrors",       w:10, q:[80,120],  ext:true,  qty:[30,80],   pts:[15,30], clue:[75,150], xp:[35,75],   sup:[200,300], xpk:55,  kph:500},
+  {lvl:60, name:"Aberrant Spectres",  w:10, q:[80,120],  ext:true,  qty:[30,80],   pts:[15,30], clue:[75,150], xp:[35,75],   sup:[200,300], xpk:90,  kph:300, cannon:430},
+  {lvl:60, name:"Basilisks",          w:10, q:[40,60],   ext:true,  qty:[50,100],  pts:[25,40], clue:[75,150], xp:[35,75],   sup:[200,300], xpk:75,  kph:375},
+  {lvl:62, name:"Wyrms",              w:10, q:[80,120],  ext:true,  qty:[50,100],  pts:[25,40], clue:[75,150], xp:[35,75],   sup:[200,300], xpk:100, kph:360},
+  {lvl:65, name:"Dust Devils",        w:8,  q:[120,180], ext:true,  qty:[50,150],  pts:[10,15], clue:null,     xp:[10,20],   sup:[100,150], xpk:105, kph:250, aoe:690},
+  {lvl:70, name:"Kurask",             w:10, q:[40,60],   ext:false, qty:[30,80],   pts:[25,40], clue:[75,150], xp:[35,75],   sup:[200,300], xpk:97,  kph:250},
+  {lvl:74, name:"Venators",           w:10, q:[120,180], ext:true,  qty:[50,100],  pts:[10,25], clue:[75,150], xp:[35,75],   sup:[200,300],  xpk:150, kph:105,  est:true, quest:true},
+  {lvl:75, name:"Gargoyles",          w:10, q:[120,180], ext:true,  qty:[50,100],  pts:[15,30], clue:[75,150], xp:[35,75],   sup:[200,300], xpk:105, kph:360},
+  {lvl:78, name:"Aquanites",          w:10, q:[40,60],   ext:true,  qty:[50,100],  pts:[25,40], clue:[75,150], xp:[35,75],   sup:[200,300], xpk:120, kph:200, est:true},
+  {lvl:80, name:"Nechryael",          w:8,  q:[150,200], ext:true,  qty:[50,100],  pts:[10,20], clue:[35,75],  xp:[15,30],   sup:[70,120],  xpk:105, kph:400, aoe:455},
+  {lvl:84, name:"Drakes",             w:10, q:[40,60],   ext:false, qty:[30,80],   pts:[25,40], clue:[75,150], xp:[25,75],   sup:[75,150],  xpk:250, kph:160},
+  {lvl:85, name:"Abyssal Demons",     w:8,  q:[120,180], ext:true,  qty:[50,100],  pts:[10,25], clue:[35,75],  xp:[10,25],   sup:[30,60],   xpk:150, kph:430, aoe:565},
+  {lvl:90, name:"Dark Beasts",        w:10, q:[40,60],   ext:true,  qty:[30,80],   pts:[10,25], clue:[75,150], xp:[35,75],   sup:[200,300], xpk:220, kph:190},
+  {lvl:92, name:"Araxytes",           w:8,  q:[120,180], ext:true,  qty:[50,100],  pts:[10,20], clue:[35,75],  xp:[5,15],    sup:[10,25],   xpk:200, kph:360, cannon:700},
+  {lvl:93, name:"Smoke Devils",       w:8,  q:[80,120],  ext:false, qty:[50,100],  pts:[10,20], clue:[35,75],  xp:[5,15],    sup:[10,25],   xpk:185, kph:300, aoe:600},
+  {lvl:95, name:"Hydras",             w:10, q:[150,200], ext:false, qty:[50,100],  pts:[15,30], clue:[75,150], xp:[10,30],   sup:[75,150],  xpk:300, kph:157},
+];
+
+const MODS = {
+  points:   {label:"Point Bounty",     prop:"pts",  unlock:0,   fmt:v=>"+"+v+" Slayer Points on completion", cls:"points"},
+  quantity: {label:"Task Quantity",    prop:"qty",  unlock:0,   fmt:v=>(v>0?"+":"")+v+" creatures assigned", cls:"quantity"},
+  clue:     {label:"Clue Scrolls",     prop:"clue", unlock:15,  fmt:v=>"+"+v+"% clue scroll drop rate", cls:"clue"},
+  superior: {label:"Superior Uniques", prop:"sup",  unlock:25,  fmt:v=>"+"+v+"% superior unique table chance", cls:"superior"},
+  xp:       {label:"Slayer XP",        prop:"xp",   unlock:40,  fmt:v=>"+"+v+"% Slayer XP", cls:"xp"},
+};
+
+const LINES = {
+  roll:[
+    "Two hands, two choices. Pick the one that keeps you alive.",
+    "Choose well. Or don't. They all end the same way for the beast.",
+    "A modifier on every task. Spoilt, the lot of you.",
+    "In my day the task chose <i>you</i>.",
+  ],
+  roll3:["Three choices? You've earned my respect. Barely."],
+  pick:[
+    "A fine choice. Now off with you.",
+    "Hm. Not what I'd have picked, but it's your funeral.",
+    "Bring me its head. Figuratively. I don't have shelf space.",
+  ],
+  done:[
+    "Back already? The caverns suit you.",
+    "Another one down. You're getting a taste for this.",
+  ],
+  skip:["A hundred points, gone. Hope it was worth your pride."],
+  block:["Struck from the list. I never liked them either."],
+};
+const say = arr => { document.getElementById("mortLine").innerHTML = arr[Math.floor(Math.random()*arr.length)]; };
+
+
+// ---- Elo ranking from a real player's choice log (pastebin.com/8vH8XUBS, 24 Jul 2026) ----
+// 388 choice events, newest-first: [chosenCreature, [offered set]]. Skipped sets excluded.
+const ELO_EVENTS = [["Kurask",["Dark Beasts","Gargoyles","Kurask"]],["Dust Devils",["Gargoyles","Kurask","Dust Devils"]],["Smoke Devils",["Smoke Devils","Dark Beasts","Aberrant Spectres"]],["Gargoyles",["Gargoyles","Banshees","Aquanites"]],["Gargoyles",["Gargoyles","Nechryael","Pyrefiends"]],["Pyrefiends",["Banshees","Pyrefiends","Gryphons"]],["Hydras",["Hydras","Dust Devils","Aberrant Spectres"]],["Gryphons",["Gargoyles","Gryphons","Dust Devils"]],["Gryphons",["Abyssal Demons","Gryphons","Cave Horrors"]],["Aquanites",["Cave Horrors","Aquanites","Custodian Stalkers"]],["Cockatrice",["Cockatrice","Custodian Stalkers","Banshees"]],["Gargoyles",["Nechryael","Gargoyles","Cockatrice"]],["Aquanites",["Aquanites","Crawling Hands","Basilisks"]],["Dark Beasts",["Dark Beasts","Basilisks","Custodian Stalkers"]],["Cockatrice",["Cockatrice","Bloodvelds","Aquanites"]],["Crawling Hands",["Crawling Hands","Aquanites","Gargoyles"]],["Basilisks",["Jellies","Cave Crawlers","Basilisks"]],["Crawling Hands",["Crawling Hands","Venators","Rockslugs"]],["Banshees",["Banshees","Bloodvelds","Crawling Hands"]],["Smoke Devils",["Abyssal Demons","Jellies","Smoke Devils"]],["Smoke Devils",["Smoke Devils","Basilisks","Custodian Stalkers"]],["Dark Beasts",["Venators","Dark Beasts","Cave Crawlers"]],["Crawling Hands",["Basilisks","Cockatrice","Crawling Hands"]],["Kurask",["Kurask","Banshees","Pyrefiends"]],["Smoke Devils",["Crawling Hands","Gryphons","Smoke Devils"]],["Kurask",["Rockslugs","Wyrms","Kurask"]],["Gargoyles",["Kurask","Gargoyles","Cave Horrors"]],["Cockatrice",["Gryphons","Cockatrice","Kurask"]],["Crawling Hands",["Custodian Stalkers","Cockatrice","Crawling Hands"]],["Cockatrice",["Bloodvelds","Cockatrice","Dust Devils"]],["Banshees",["Basilisks","Cave Crawlers","Banshees"]],["Aquanites",["Bloodvelds","Aquanites","Aberrant Spectres"]],["Basilisks",["Abyssal Demons","Bloodvelds","Basilisks"]],["Banshees",["Gryphons","Nechryael","Banshees"]],["Pyrefiends",["Pyrefiends","Dark Beasts","Venators"]],["Abyssal Demons",["Cockatrice","Custodian Stalkers","Abyssal Demons"]],["Crawling Hands",["Pyrefiends","Basilisks","Crawling Hands"]],["Aberrant Spectres",["Dark Beasts","Warped Creatures","Aberrant Spectres"]],["Custodian Stalkers",["Custodian Stalkers","Warped Creatures","Hydras"]],["Custodian Stalkers",["Abyssal Demons","Custodian Stalkers","Hydras"]],["Araxytes",["Jellies","Abyssal Demons","Araxytes"]],["Smoke Devils",["Rockslugs","Custodian Stalkers","Smoke Devils"]],["Rockslugs",["Dark Beasts","Rockslugs","Banshees"]],["Basilisks",["Aberrant Spectres","Basilisks","Gryphons"]],["Dust Devils",["Dust Devils","Cave Crawlers","Aberrant Spectres"]],["Araxytes",["Custodian Stalkers","Araxytes","Nechryael"]],["Dust Devils",["Dust Devils","Banshees","Crawling Hands"]],["Kurask",["Aquanites","Cockatrice","Kurask"]],["Jellies",["Jellies","Aberrant Spectres","Basilisks"]],["Crawling Hands",["Hydras","Rockslugs","Crawling Hands"]],["Dust Devils",["Warped Creatures","Aquanites","Dust Devils"]],["Cave Crawlers",["Abyssal Demons","Basilisks","Cave Crawlers"]],["Basilisks",["Basilisks","Cockatrice","Wyrms"]],["Cave Crawlers",["Crawling Hands","Cave Crawlers","Venators"]],["Smoke Devils",["Rockslugs","Smoke Devils","Aquanites"]],["Rockslugs",["Abyssal Demons","Rockslugs","Gryphons"]],["Araxytes",["Jellies","Hydras","Araxytes"]],["Cave Crawlers",["Aberrant Spectres","Cave Crawlers","Custodian Stalkers"]],["Crawling Hands",["Abyssal Demons","Hydras","Crawling Hands"]],["Rockslugs",["Rockslugs","Dust Devils","Bloodvelds"]],["Araxytes",["Cave Crawlers","Araxytes","Gargoyles"]],["Aquanites",["Aquanites","Bloodvelds","Abyssal Demons"]],["Aberrant Spectres",["Aberrant Spectres","Warped Creatures","Cave Crawlers"]],["Smoke Devils",["Smoke Devils","Custodian Stalkers","Venators"]],["Araxytes",["Cockatrice","Araxytes","Wyrms"]],["Smoke Devils",["Smoke Devils","Aberrant Spectres","Warped Creatures"]],["Bloodvelds",["Wyrms","Bloodvelds","Jellies"]],["Gargoyles",["Gargoyles","Venators","Araxytes"]],["Wyrms",["Bloodvelds","Wyrms","Hydras"]],["Dark Beasts",["Dark Beasts","Banshees","Bloodvelds"]],["Rockslugs",["Rockslugs","Venators","Custodian Stalkers"]],["Basilisks",["Cave Horrors","Nechryael","Basilisks"]],["Cockatrice",["Cockatrice","Aquanites","Gryphons"]],["Crawling Hands",["Crawling Hands","Cave Horrors","Hydras"]],["Smoke Devils",["Gryphons","Cave Crawlers","Smoke Devils"]],["Cockatrice",["Banshees","Cockatrice","Crawling Hands"]],["Crawling Hands",["Aquanites","Crawling Hands","Nechryael"]],["Gargoyles",["Cave Crawlers","Basilisks","Gargoyles"]],["Smoke Devils",["Smoke Devils","Cave Horrors","Nechryael"]],["Smoke Devils",["Hydras","Aquanites","Smoke Devils"]],["Cave Horrors",["Venators","Aquanites","Cave Horrors"]],["Araxytes",["Dark Beasts","Araxytes","Gryphons"]],["Crawling Hands",["Hydras","Crawling Hands","Aberrant Spectres"]],["Araxytes",["Araxytes","Cave Crawlers","Jellies"]],["Pyrefiends",["Gryphons","Aberrant Spectres","Pyrefiends"]],["Araxytes",["Custodian Stalkers","Aberrant Spectres","Araxytes"]],["Cockatrice",["Cockatrice","Abyssal Demons","Dust Devils"]],["Smoke Devils",["Gryphons","Banshees","Smoke Devils"]],["Araxytes",["Araxytes","Cave Horrors","Jellies"]],["Banshees",["Banshees","Rockslugs","Warped Creatures"]],["Warped Creatures",["Gargoyles","Warped Creatures","Hydras"]],["Jellies",["Jellies","Aberrant Spectres","Venators"]],["Pyrefiends",["Warped Creatures","Pyrefiends","Gryphons"]],["Kurask",["Kurask","Warped Creatures","Hydras"]],["Cave Horrors",["Dark Beasts","Hydras","Cave Horrors"]],["Smoke Devils",["Cockatrice","Gryphons","Smoke Devils"]],["Gryphons",["Nechryael","Abyssal Demons","Gryphons"]],["Crawling Hands",["Gryphons","Bloodvelds","Crawling Hands"]],["Basilisks",["Aquanites","Basilisks","Gryphons"]],["Dark Beasts",["Dark Beasts","Hydras","Aberrant Spectres"]],["Smoke Devils",["Smoke Devils","Pyrefiends","Venators"]],["Wyrms",["Wyrms","Aberrant Spectres","Nechryael"]],["Araxytes",["Araxytes","Warped Creatures","Basilisks"]],["Dust Devils",["Aberrant Spectres","Custodian Stalkers","Dust Devils"]],["Pyrefiends",["Pyrefiends","Venators","Aberrant Spectres"]],["Cave Horrors",["Cave Crawlers","Cave Horrors","Banshees"]],["Banshees",["Pyrefiends","Banshees","Cave Crawlers"]],["Wyrms",["Wyrms","Cave Horrors","Rockslugs"]],["Gryphons",["Jellies","Gryphons","Warped Creatures"]],["Aquanites",["Aquanites","Gargoyles","Dust Devils"]],["Kurask",["Bloodvelds","Kurask","Nechryael"]],["Warped Creatures",["Gargoyles","Hydras","Warped Creatures"]],["Smoke Devils",["Smoke Devils","Gargoyles","Aberrant Spectres"]],["Nechryael",["Warped Creatures","Nechryael","Dust Devils"]],["Aberrant Spectres",["Cave Horrors","Aberrant Spectres","Kurask"]],["Araxytes",["Banshees","Araxytes","Kurask"]],["Cave Horrors",["Custodian Stalkers","Crawling Hands","Cave Horrors"]],["Dust Devils",["Dust Devils","Aberrant Spectres","Rockslugs"]],["Venators",["Venators","Gargoyles","Pyrefiends"]],["Araxytes",["Kurask","Araxytes","Hydras"]],["Bloodvelds",["Abyssal Demons","Wyrms","Bloodvelds"]],["Wyrms",["Gryphons","Wyrms","Rockslugs"]],["Araxytes",["Araxytes","Basilisks","Hydras"]],["Jellies",["Gryphons","Gargoyles","Jellies"]],["Araxytes",["Venators","Nechryael","Araxytes"]],["Venators",["Venators","Custodian Stalkers","Banshees"]],["Aberrant Spectres",["Cave Crawlers","Aberrant Spectres","Venators"]],["Nechryael",["Gryphons","Banshees","Nechryael"]],["Pyrefiends",["Pyrefiends","Gryphons","Rockslugs"]],["Crawling Hands",["Gargoyles","Dark Beasts","Crawling Hands"]],["Basilisks",["Custodian Stalkers","Basilisks","Cave Horrors"]],["Smoke Devils",["Smoke Devils","Rockslugs","Gryphons"]],["Cockatrice",["Nechryael","Gargoyles","Cockatrice"]],["Rockslugs",["Warped Creatures","Rockslugs","Basilisks"]],["Nechryael",["Cave Horrors","Nechryael","Kurask"]],["Cave Crawlers",["Cave Horrors","Aquanites","Cave Crawlers"]],["Gryphons",["Gryphons","Cave Horrors","Crawling Hands"]],["Pyrefiends",["Cockatrice","Pyrefiends","Bloodvelds"]],["Jellies",["Aquanites","Jellies","Aberrant Spectres"]],["Smoke Devils",["Smoke Devils","Abyssal Demons","Kurask"]],["Hydras",["Hydras","Banshees","Nechryael"]],["Smoke Devils",["Aberrant Spectres","Cave Crawlers","Smoke Devils"]],["Cockatrice",["Cockatrice","Rockslugs","Basilisks"]],["Gryphons",["Gryphons","Jellies","Dark Beasts"]],["Kurask",["Nechryael","Gargoyles","Kurask"]],["Pyrefiends",["Pyrefiends","Custodian Stalkers","Nechryael"]],["Araxytes",["Hydras","Dust Devils","Araxytes"]],["Aquanites",["Warped Creatures","Gargoyles","Aquanites"]],["Smoke Devils",["Smoke Devils","Wyrms","Abyssal Demons"]],["Dark Beasts",["Warped Creatures","Dark Beasts","Jellies"]],["Aberrant Spectres",["Hydras","Aberrant Spectres","Gargoyles"]],["Pyrefiends",["Bloodvelds","Pyrefiends","Gryphons"]],["Kurask",["Kurask","Wyrms","Warped Creatures"]],["Kurask",["Rockslugs","Kurask","Basilisks"]],["Banshees",["Banshees","Bloodvelds","Gargoyles"]],["Dust Devils",["Kurask","Dust Devils","Banshees"]],["Dark Beasts",["Wyrms","Jellies","Dark Beasts"]],["Dark Beasts",["Dark Beasts","Gargoyles","Basilisks"]],["Rockslugs",["Rockslugs","Aquanites","Gargoyles"]],["Nechryael",["Pyrefiends","Hydras","Nechryael"]],["Basilisks",["Basilisks","Kurask","Nechryael"]],["Gryphons",["Cockatrice","Gryphons","Venators"]],["Abyssal Demons",["Dark Beasts","Abyssal Demons","Warped Creatures"]],["Cockatrice",["Cockatrice","Venators","Abyssal Demons"]],["Dark Beasts",["Dark Beasts","Rockslugs","Gargoyles"]],["Cave Crawlers",["Banshees","Cave Crawlers","Aberrant Spectres"]],["Banshees",["Kurask","Banshees","Wyrms"]],["Aberrant Spectres",["Warped Creatures","Aberrant Spectres","Cave Crawlers"]],["Gryphons",["Nechryael","Gryphons","Kurask"]],["Araxytes",["Araxytes","Abyssal Demons","Rockslugs"]],["Hydras",["Aquanites","Aberrant Spectres","Hydras"]],["Smoke Devils",["Cockatrice","Custodian Stalkers","Smoke Devils"]],["Araxytes",["Abyssal Demons","Kurask","Araxytes"]],["Pyrefiends",["Pyrefiends","Jellies","Aberrant Spectres"]],["Basilisks",["Banshees","Aquanites","Basilisks"]],["Banshees",["Jellies","Banshees","Basilisks"]],["Bloodvelds",["Jellies","Wyrms","Bloodvelds"]],["Rockslugs",["Bloodvelds","Pyrefiends","Rockslugs"]],["Custodian Stalkers",["Custodian Stalkers","Aberrant Spectres","Hydras"]],["Basilisks",["Gargoyles","Venators","Basilisks"]],["Custodian Stalkers",["Venators","Custodian Stalkers","Dust Devils"]],["Banshees",["Banshees","Aberrant Spectres","Venators"]],["Pyrefiends",["Pyrefiends","Nechryael","Wyrms"]],["Abyssal Demons",["Cockatrice","Abyssal Demons","Aberrant Spectres"]],["Rockslugs",["Abyssal Demons","Bloodvelds","Rockslugs"]],["Dust Devils",["Wyrms","Dust Devils","Warped Creatures"]],["Smoke Devils",["Hydras","Smoke Devils","Gargoyles"]],["Aquanites",["Dust Devils","Aquanites","Cockatrice"]],["Crawling Hands",["Crawling Hands","Aquanites","Wyrms"]],["Kurask",["Kurask","Gargoyles","Pyrefiends"]],["Smoke Devils",["Wyrms","Smoke Devils","Aberrant Spectres"]],["Gryphons",["Wyrms","Rockslugs","Gryphons"]],["Cave Crawlers",["Nechryael","Cave Horrors","Cave Crawlers"]],["Dark Beasts",["Dark Beasts","Hydras","Warped Creatures"]],["Kurask",["Nechryael","Kurask","Cave Horrors"]],["Basilisks",["Cave Horrors","Nechryael","Basilisks"]],["Araxytes",["Nechryael","Araxytes","Rockslugs"]],["Aberrant Spectres",["Aberrant Spectres","Hydras","Cave Horrors"]],["Cockatrice",["Cockatrice","Cave Crawlers","Dark Beasts"]],["Kurask",["Kurask","Wyrms","Gryphons"]],["Aberrant Spectres",["Aberrant Spectres","Venators","Jellies"]],["Araxytes",["Basilisks","Bloodvelds","Araxytes"]],["Bloodvelds",["Bloodvelds","Kurask","Aberrant Spectres"]],["Rockslugs",["Rockslugs","Venators","Hydras"]],["Pyrefiends",["Pyrefiends","Venators","Nechryael"]],["Cockatrice",["Basilisks","Cave Crawlers","Cockatrice"]],["Kurask",["Gryphons","Dark Beasts","Kurask"]],["Araxytes",["Crawling Hands","Araxytes","Gargoyles"]],["Smoke Devils",["Smoke Devils","Basilisks","Kurask"]],["Araxytes",["Cave Crawlers","Araxytes","Banshees"]],["Aberrant Spectres",["Dark Beasts","Aberrant Spectres","Warped Creatures"]],["Gargoyles",["Hydras","Venators","Gargoyles"]],["Cockatrice",["Cockatrice","Wyrms","Nechryael"]],["Pyrefiends",["Pyrefiends","Rockslugs","Basilisks"]],["Cockatrice",["Basilisks","Cockatrice","Pyrefiends"]],["Cave Crawlers",["Cave Crawlers","Nechryael","Gryphons"]],["Crawling Hands",["Crawling Hands","Bloodvelds","Pyrefiends"]],["Banshees",["Gryphons","Kurask","Banshees"]],["Custodian Stalkers",["Warped Creatures","Cave Horrors","Custodian Stalkers"]],["Aquanites",["Cave Crawlers","Warped Creatures","Aquanites"]],["Abyssal Demons",["Kurask","Hydras","Abyssal Demons"]],["Cockatrice",["Cockatrice","Warped Creatures","Pyrefiends"]],["Aquanites",["Abyssal Demons","Dark Beasts","Aquanites"]],["Cave Crawlers",["Gargoyles","Cave Crawlers","Nechryael"]],["Bloodvelds",["Gryphons","Dark Beasts","Bloodvelds"]],["Banshees",["Hydras","Gryphons","Banshees"]],["Rockslugs",["Gryphons","Nechryael","Rockslugs"]],["Jellies",["Pyrefiends","Jellies","Basilisks"]],["Kurask",["Kurask","Wyrms","Gargoyles"]],["Araxytes",["Araxytes","Cave Horrors","Gargoyles"]],["Rockslugs",["Warped Creatures","Rockslugs","Kurask"]],["Araxytes",["Araxytes","Warped Creatures","Bloodvelds"]],["Pyrefiends",["Custodian Stalkers","Hydras","Pyrefiends"]],["Banshees",["Banshees","Rockslugs","Pyrefiends"]],["Araxytes",["Araxytes","Wyrms","Rockslugs"]],["Wyrms",["Custodian Stalkers","Warped Creatures","Wyrms"]],["Pyrefiends",["Nechryael","Pyrefiends","Warped Creatures"]],["Rockslugs",["Cave Crawlers","Basilisks","Rockslugs"]],["Dust Devils",["Aberrant Spectres","Dust Devils","Nechryael"]],["Custodian Stalkers",["Gargoyles","Custodian Stalkers","Aberrant Spectres"]],["Smoke Devils",["Dust Devils","Rockslugs","Smoke Devils"]],["Rockslugs",["Rockslugs","Wyrms","Warped Creatures"]],["Araxytes",["Araxytes","Gargoyles","Aberrant Spectres"]],["Crawling Hands",["Crawling Hands","Hydras","Banshees"]],["Hydras",["Pyrefiends","Hydras","Gargoyles"]],["Araxytes",["Rockslugs","Araxytes","Cockatrice"]],["Araxytes",["Cockatrice","Nechryael","Araxytes"]],["Banshees",["Custodian Stalkers","Banshees","Crawling Hands"]],["Smoke Devils",["Cockatrice","Pyrefiends","Smoke Devils"]],["Dark Beasts",["Abyssal Demons","Dark Beasts","Crawling Hands"]],["Rockslugs",["Rockslugs","Gargoyles","Cave Horrors"]],["Araxytes",["Warped Creatures","Araxytes","Venators"]],["Dark Beasts",["Venators","Araxytes","Dark Beasts"]],["Wyrms",["Hydras","Wyrms","Basilisks"]],["Banshees",["Cockatrice","Aberrant Spectres","Banshees"]],["Smoke Devils",["Custodian Stalkers","Gargoyles","Smoke Devils"]],["Smoke Devils",["Smoke Devils","Banshees","Rockslugs"]],["Wyrms",["Wyrms","Gargoyles","Warped Creatures"]],["Jellies",["Jellies","Warped Creatures","Basilisks"]],["Bloodvelds",["Bloodvelds","Aberrant Spectres","Abyssal Demons"]],["Dust Devils",["Jellies","Dust Devils","Cockatrice"]],["Pyrefiends",["Aberrant Spectres","Warped Creatures","Pyrefiends"]],["Jellies",["Jellies","Kurask","Custodian Stalkers"]],["Dust Devils",["Aquanites","Gargoyles","Dust Devils"]],["Warped Creatures",["Wyrms","Abyssal Demons","Warped Creatures"]],["Araxytes",["Dark Beasts","Wyrms","Araxytes"]],["Cockatrice",["Cave Crawlers","Cockatrice","Basilisks"]],["Cockatrice",["Banshees","Jellies","Cockatrice"]],["Hydras",["Cave Horrors","Hydras","Cave Crawlers"]],["Banshees",["Jellies","Dark Beasts","Banshees"]],["Dust Devils",["Bloodvelds","Kurask","Dust Devils"]],["Aberrant Spectres",["Bloodvelds","Pyrefiends","Aberrant Spectres"]],["Aberrant Spectres",["Aberrant Spectres","Custodian Stalkers","Kurask"]],["Rockslugs",["Hydras","Abyssal Demons","Rockslugs"]],["Venators",["Venators","Cockatrice","Warped Creatures"]],["Smoke Devils",["Cave Horrors","Smoke Devils","Custodian Stalkers"]],["Smoke Devils",["Smoke Devils","Wyrms","Banshees"]],["Abyssal Demons",["Cave Crawlers","Rockslugs","Abyssal Demons"]],["Araxytes",["Araxytes","Cave Horrors","Nechryael"]],["Smoke Devils",["Gargoyles","Smoke Devils","Dust Devils"]],["Aquanites",["Bloodvelds","Aquanites","Kurask"]],["Venators",["Gryphons","Nechryael","Venators"]],["Banshees",["Banshees","Kurask","Aberrant Spectres"]],["Cave Horrors",["Bloodvelds","Cave Horrors","Gryphons"]],["Banshees",["Wyrms","Banshees","Cave Horrors"]],["Aquanites",["Kurask","Aquanites","Warped Creatures"]],["Crawling Hands",["Gryphons","Crawling Hands","Banshees"]],["Aquanites",["Aquanites","Bloodvelds","Kurask"]],["Araxytes",["Cave Crawlers","Araxytes"]],["Rockslugs",["Gryphons","Rockslugs"]],["Kurask",["Kurask","Gryphons"]],["Basilisks",["Basilisks","Abyssal Demons"]],["Cockatrice",["Cockatrice","Hydras"]],["Araxytes",["Bloodvelds","Araxytes"]],["Kurask",["Dark Beasts","Kurask"]],["Jellies",["Warped Creatures","Jellies"]],["Aquanites",["Aquanites","Abyssal Demons"]],["Wyrms",["Warped Creatures","Wyrms"]],["Smoke Devils",["Dust Devils","Smoke Devils"]],["Pyrefiends",["Nechryael","Pyrefiends"]],["Venators",["Gryphons","Venators"]],["Crawling Hands",["Crawling Hands","Abyssal Demons"]],["Dark Beasts",["Dark Beasts","Cave Crawlers"]],["Pyrefiends",["Pyrefiends","Abyssal Demons"]],["Cockatrice",["Cockatrice","Venators"]],["Jellies",["Gryphons","Jellies"]],["Bloodvelds",["Gryphons","Bloodvelds"]],["Aquanites",["Gargoyles","Aquanites"]],["Crawling Hands",["Crawling Hands","Cockatrice"]],["Dark Beasts",["Dark Beasts","Basilisks"]],["Rockslugs",["Pyrefiends","Rockslugs"]],["Smoke Devils",["Smoke Devils","Crawling Hands"]],["Abyssal Demons",["Abyssal Demons","Cave Horrors"]],["Dust Devils",["Banshees","Dust Devils"]],["Smoke Devils",["Aquanites","Smoke Devils"]],["Cave Crawlers",["Cave Crawlers","Warped Creatures"]],["Dark Beasts",["Dark Beasts","Cave Crawlers"]],["Cave Crawlers",["Cave Crawlers","Gryphons"]],["Crawling Hands",["Crawling Hands","Rockslugs"]],["Aquanites",["Dust Devils","Aquanites"]],["Venators",["Gryphons","Venators"]],["Banshees",["Pyrefiends","Banshees"]],["Rockslugs",["Rockslugs","Cave Crawlers"]],["Nechryael",["Nechryael","Hydras"]],["Kurask",["Cave Horrors","Kurask"]],["Crawling Hands",["Custodian Stalkers","Crawling Hands"]],["Cockatrice",["Aquanites","Cockatrice"]],["Pyrefiends",["Gryphons","Pyrefiends"]],["Cockatrice",["Dust Devils","Cockatrice"]],["Wyrms",["Wyrms","Jellies"]],["Rockslugs",["Rockslugs","Nechryael"]],["Kurask",["Hydras","Kurask"]],["Aberrant Spectres",["Aberrant Spectres","Gryphons"]],["Gargoyles",["Gargoyles","Warped Creatures"]],["Cockatrice",["Cave Crawlers","Cockatrice"]],["Abyssal Demons",["Abyssal Demons","Warped Creatures"]],["Cave Crawlers",["Kurask","Cave Crawlers"]],["Araxytes",["Araxytes","Abyssal Demons"]],["Araxytes",["Custodian Stalkers","Araxytes"]],["Smoke Devils",["Rockslugs","Smoke Devils"]],["Custodian Stalkers",["Custodian Stalkers","Wyrms"]],["Bloodvelds",["Gargoyles","Bloodvelds"]],["Custodian Stalkers",["Aberrant Spectres","Custodian Stalkers"]],["Araxytes",["Nechryael","Araxytes"]],["Rockslugs",["Cave Crawlers","Rockslugs"]],["Cockatrice",["Dark Beasts","Cockatrice"]],["Wyrms",["Dark Beasts","Wyrms"]],["Dark Beasts",["Nechryael","Dark Beasts"]],["Araxytes",["Araxytes","Dust Devils"]],["Pyrefiends",["Cave Horrors","Pyrefiends"]],["Jellies",["Hydras","Jellies"]],["Araxytes",["Dust Devils","Araxytes"]],["Smoke Devils",["Smoke Devils","Aquanites"]],["Araxytes",["Araxytes","Pyrefiends"]],["Banshees",["Banshees","Wyrms"]],["Rockslugs",["Rockslugs","Banshees"]],["Araxytes",["Crawling Hands","Araxytes"]],["Kurask",["Custodian Stalkers","Kurask"]],["Araxytes",["Venators","Araxytes"]],["Wyrms",["Bloodvelds","Wyrms"]],["Wyrms",["Wyrms","Kurask"]],["Dust Devils",["Dust Devils","Venators"]],["Cave Crawlers",["Cave Crawlers","Jellies"]],["Cockatrice",["Aquanites","Cockatrice"]],["Smoke Devils",["Warped Creatures","Smoke Devils"]],["Gryphons",["Dark Beasts","Gryphons"]],["Pyrefiends",["Pyrefiends","Aquanites"]],["Kurask",["Crawling Hands","Kurask"]],["Aberrant Spectres",["Aberrant Spectres","Cave Horrors"]],["Nechryael",["Gargoyles","Nechryael"]],["Pyrefiends",["Pyrefiends","Bloodvelds"]],["Banshees",["Kurask","Banshees"]],["Abyssal Demons",["Abyssal Demons","Basilisks"]],["Araxytes",["Banshees","Araxytes"]],["Aquanites",["Warped Creatures","Aquanites"]],["Cockatrice",["Cockatrice","Custodian Stalkers"]],["Cave Crawlers",["Cave Crawlers","Jellies"]],["Jellies",["Wyrms","Jellies"]],["Cave Crawlers",["Nechryael","Cave Crawlers"]],["Cave Horrors",["Dust Devils","Cave Horrors"]],["Cave Crawlers",["Hydras","Cave Crawlers"]],["Wyrms",["Wyrms","Venators"]],["Cave Horrors",["Cave Horrors","Hydras"]],["Aberrant Spectres",["Aberrant Spectres","Venators"]],["Custodian Stalkers",["Crawling Hands","Custodian Stalkers"]],["Wyrms",["Pyrefiends","Wyrms"]],["Banshees",["Banshees","Cave Crawlers"]],["Pyrefiends",["Pyrefiends","Hydras"]]];
+function computeRatings(events){
+  const R = {}, K = 32;
+  const get = n => (R[n] === undefined ? (R[n] = 1000) : R[n]);
+  // Events are newest-first; process chronologically
+  for (let i = events.length - 1; i >= 0; i--) {
+    const [w, set] = events[i];
+    set.forEach(get);
+    for (const l of set) {
+      if (l === w) continue;
+      const ew = 1 / (1 + Math.pow(10, (R[l] - R[w]) / 400));
+      R[w] += K * (1 - ew);
+      R[l] -= K * (1 - ew);
+    }
+  }
+  return R;
+}
+// Default ratings mapped from the grade tiers in Travag's pre-release Mortimer
+// spreadsheet (S+ 1450 down to F-- 650; "use to skip" fodder banded 800-880 by
+// its hours-to-heart ordering).
+function defaultRatings(){
+  return {
+    "Araxytes":1450, "Smoke Devils":1400,
+    "Cave Horrors":1300, "Dark Beasts":1300,
+    "Abyssal Demons":1250, "Dust Devils":1250, "Gargoyles":1250,
+    "Aberrant Spectres":1150, "Nechryael":1150, "Jellies":1150, "Hydras":1150,
+    "Custodian Stalkers":1100, "Warped Creatures":1100,
+    "Kurask":1050, "Wyrms":1050,
+    "Aquanites":1000,
+    "Turoth":950, "Gryphons":950,
+    "Bloodvelds":900,
+    "Crawling Hands":880, "Cave Crawlers":865, "Banshees":860, "Rockslugs":845,
+    "Basilisks":840, "Pyrefiends":830, "Infernal Mages":815, "Cockatrice":800,
+    "Drakes":800, "Venators":650
+  };
+}
+let ELO_SOURCE = "";
+// Ratings are free-floating: they start at the defaults below, then drift as the
+// player makes real choices (chosen task beats each rejected one, Elo K=32, so
+// upsets by lower-rated tasks move scores further). Manual edits write directly
+// into the live ratings; Restore defaults returns to the base values.
+function materializeDefaults(base){
+  const out = {};
+  POOL.forEach(c => { out[c.name] = base[c.name] !== undefined ? base[c.name] : 750; });
+  return out;
+}
+let ELO_DEFAULTS = materializeDefaults(defaultRatings());
+let ELO_LIVE = Object.assign({}, ELO_DEFAULTS);
+const eloOf = name => ELO_LIVE[name] !== undefined ? ELO_LIVE[name] : 750;
+const ELO_K = 32;
+// Apply one choice: winner beats each rejected offer pairwise
+// Skipping a set counts as every offer losing to a virtual opponent rated at the
+// skip threshold, so highly rated offers you refuse fall further than weak ones.
+function eloSkipAll(names){
+  const thr = ELO_WEIGHTS.skipBelow;
+  for(const n of names){
+    const r = eloOf(n);
+    const eWin = 1 / (1 + Math.pow(10, (thr - r) / 400));
+    ELO_LIVE[n] = r - ELO_K * eWin;
+  }
+}
+function eloMatch(winner, losers){
+  const changes = [];
+  for(const l of losers){
+    const rw = eloOf(winner), rl = eloOf(l);
+    const ew = 1 / (1 + Math.pow(10, (rl - rw) / 400));
+    ELO_LIVE[winner] = rw + ELO_K * (1 - ew);
+    ELO_LIVE[l]      = rl - ELO_K * (1 - ew);
+    changes.push(`${l} ${Math.round(rl)}→${Math.round(ELO_LIVE[l])}`);
+  }
+  return changes;
+}
+let ELO_RANKING = [];
+function rebuildRanking(){
+  ELO_RANKING = POOL.map(c => ({ name: c.name, elo: eloOf(c.name) }))
+                    .sort((a, b) => b.elo - a.elo);
+}
+rebuildRanking();
+
+
+// ---- Configurable Elo modifier weights (item 6) ----
+let ELO_WEIGHTS = { superiorPerPct: 1, perPoint: 5, xpPerPct: 0.5, cluePerPct: 0.3, qtyMax: 100, skipBelow: 1050 };
+
+// ---- Kill methods & editable rates (item 1) ----
+const METHOD_LABELS = { kph: "Standard", aoe: "Barrage", cannon: "Cannon" };
+let RATE_EDITS = {};   // {creatureName: {methodKey: kph}}
+function methodsOf(c){
+  const m = { kph: c.kph };
+  if (c.aoe) m.aoe = c.aoe;
+  if (c.cannon) m.cannon = c.cannon;
+  const ed = RATE_EDITS[c.name];
+  if (ed) for (const k in ed) if (m[k] !== undefined) m[k] = ed[k];
+  return m;
+}
+function defaultMethod(c){
+  const m = methodsOf(c);
+  const pref = $("methodPref") ? $("methodPref").value : "best";
+  if (pref === "standard") return "kph";
+  let best = "kph";
+  for (const k in m){
+    if (pref === "no_cannon" && k === "cannon") continue;
+    if (m[k] > m[best]) best = k;
+  }
+  return best;
+}
+function methodRate(c, method){
+  const m = methodsOf(c);
+  return m[method] !== undefined ? m[method] : m.kph;
+}
+
+// ---- Persistence (item 7): localStorage with in-memory fallback ----
+const SAVE_KEY = "mortimer-sim-v1";
+const storageOK = (() => { try { localStorage.setItem("__t","1"); localStorage.removeItem("__t"); return true; } catch(e){ return false; } })();
+function save(){
+  if(!storageOK) return;
+  try{
+    localStorage.setItem(SAVE_KEY, JSON.stringify({
+      pts: state.pts, xpTotal: state.xpTotal, heartsTotal: state.heartsTotal,
+      blocked: state.blocked, timeLog: state.timeLog,
+      weights: ELO_WEIGHTS, rateEdits: RATE_EDITS, eloLive: ELO_LIVE,
+      settings: { lvl: $("slayerLvl").value, tasks: $("tasksDone").value,
+                  ven: $("venators").checked, eliteCA: $("eliteCA").checked, fast: $("fastToggle").checked, adv: $("advToggle").checked, brExp: $("braceletExp").checked, brSla: $("braceletSla").checked, simHeartMax: $("simHeartMax").value, simFastMin: $("simFastMin").value, methodPref: $("methodPref").value }
+    }));
+  }catch(e){}
+}
+function loadSave(){
+  if(!storageOK) return;
+  try{
+    const d = JSON.parse(localStorage.getItem(SAVE_KEY) || "null");
+    if(!d) return;
+    state.pts = d.pts ?? state.pts;
+    state.xpTotal = d.xpTotal ?? 0;
+    state.heartsTotal = d.heartsTotal ?? 0;
+    state.blocked = Array.isArray(d.blocked) ? d.blocked : state.blocked;
+    state.timeLog = d.timeLog || {};
+    if(d.weights) Object.assign(ELO_WEIGHTS, d.weights);
+    if(d.rateEdits) RATE_EDITS = d.rateEdits;
+    if(d.eloLive) ELO_LIVE = Object.assign({}, ELO_DEFAULTS, d.eloLive);
+    else if(d.eloEdits) Object.assign(ELO_LIVE, d.eloEdits); // migrate older saves
+    if(d.settings){
+      $("slayerLvl").value = d.settings.lvl ?? $("slayerLvl").value;
+      $("tasksDone").value = d.settings.tasks ?? $("tasksDone").value;
+      $("venators").checked = !!d.settings.ven;
+      if(d.settings.eliteCA !== undefined) $("eliteCA").checked = !!d.settings.eliteCA;
+      if(d.settings.fast !== undefined) $("fastToggle").checked = !!d.settings.fast;
+      if(d.settings.adv !== undefined) $("advToggle").checked = !!d.settings.adv;
+      if(d.settings.brExp !== undefined) $("braceletExp").checked = !!d.settings.brExp;
+      if(d.settings.brSla !== undefined) $("braceletSla").checked = !!d.settings.brSla;
+      if(d.settings.simHeartMax !== undefined) $("simHeartMax").value = d.settings.simHeartMax;
+      if(d.settings.simFastMin !== undefined) $("simFastMin").value = d.settings.simFastMin;
+      if(d.settings.methodPref) $("methodPref").value = d.settings.methodPref;
+    }
+  }catch(e){}
+}
+function resetSave(){
+  if(storageOK){ try{ localStorage.removeItem(SAVE_KEY); }catch(e){} }
+  state = { pts: 1000, xpTotal: 0, heartsTotal: 0, offers: [], completing: null, blocked: ["Drakes","Venators"], timeLog: {} };
+  ELO_WEIGHTS = { superiorPerPct: 1, perPoint: 5, xpPerPct: 0.5, cluePerPct: 0.3, qtyMax: 100, skipBelow: 1050 };
+  RATE_EDITS = {};
+  ELO_LIVE = Object.assign({}, ELO_DEFAULTS);
+  $("slayerLvl").value = 95; $("tasksDone").value = 0; $("venators").checked = true; $("eliteCA").checked = true; $("fastToggle").checked = true; $("advToggle").checked = false; document.body.classList.remove("advanced"); $("braceletExp").checked = true; $("braceletSla").checked = true; $("simHeartMax").value = 75; $("simFastMin").value = 16; $("methodPref").value = "best";
+  renderWeights(); renderRates(); renderBlocks(); renderEloList(); render(); renderLedger();
+  log("Progress reset.");
+}
+
+// Modifier adjustment to Elo, used for the Top Rated flag on offered tasks.
+// Superior unique: +1 Elo per percent. Points: +5 Elo per point.
+// Quantity: up to ±100 Elo scaled by roll size, direction depends on why the task gets taken:
+//   good (>1000) & short (<75 avg kills) tasks are taken for speed  -> fewer kills better
+//   good & long tasks are inherently good                           -> more kills better
+//   bad (<=1000) tasks                                              -> fewer kills always better
+function eloModAdjust(o){
+  const v = o.mod.value, W = ELO_WEIGHTS;
+  switch(o.mod.type){
+    case "superior": {
+      // Scale by this monster's base imbued-hearts-per-hour relative to the best in the pool
+      const hph = c => methodRate(c, defaultMethod(c)) * superiorSpawnRate() / heartDenom(c);
+      const maxHph = Math.max(...POOL.map(hph));
+      return Math.round(v * W.superiorPerPct * (hph(o.c) / maxHph));
+    }
+    case "points":   return Math.round(v * W.perPoint);
+    case "xp":       return Math.round(v * W.xpPerPct);
+    case "clue":     return Math.round(v * W.cluePerPct);
+    case "quantity": {
+      const maxAbs = Math.max(Math.abs(o.c.qty[0]), Math.abs(o.c.qty[1]));
+      const mag = Math.round(W.qtyMax * Math.abs(v) / maxAbs);
+      const fewerKills = v < 0;
+      const helpful = fewerKills ? fewerKillsGood(o.c) : !fewerKillsGood(o.c);
+      return helpful ? mag : -mag;
+    }
+    default: return 0;
+  }
+}
+// Tasks Travag's sheet grades "(Superior Buff)": their value depends on the Superior
+// droprate Mortifier. Any offer of these creatures that did NOT roll the Superior
+// modifier carries a flat -200 effective-Elo penalty.
+const SUP_BUFF_ONLY = new Set(["Cave Horrors","Dark Beasts","Dust Devils","Gargoyles",
+  "Aberrant Spectres","Nechryael","Jellies","Hydras","Custodian Stalkers",
+  "Warped Creatures","Kurask","Wyrms","Aquanites","Turoth","Gryphons","Bloodvelds",
+  "Abyssal Demons"]);
+function supBuffPenalty(o){
+  const hasSuperior = o.mod && o.mod.type === "superior";
+  return (!hasSuperior && SUP_BUFF_ONLY.has(o.c.name)) ? -200 : 0;
+}
+const effElo = o => eloOf(o.c.name) + eloModAdjust(o) + supBuffPenalty(o);
+// Always-on prestige highlight: any offer whose adjusted Elo reaches the
+// second-highest base task Elo (1400 with default ratings; moves as Elos drift)
+function eliteThreshold(){
+  const sorted = POOL.map(c => eloOf(c.name)).sort((a,b) => b - a);
+  return sorted.length > 1 ? sorted[1] : sorted[0];
+}
+// Below ELO_WEIGHTS.skipBelow effective Elo, no offer is worth taking; recommend a skip instead
+
+// ---- state ----
+let state = {
+  pts: 1000,
+  xpTotal: 0,
+  heartsTotal: 0,
+  offers: [],
+  completing: null,
+  blocked: ["Drakes", "Venators"],
+  timeLog: {},
+};
+
+// Clue tier each creature drops (approx; base rate 1/128)
+const CLUE_TIER_EASY = new Set(["Banshees"]);
+const CLUE_TIER_MEDIUM = new Set(["Cockatrice","Pyrefiends","Infernal Mages"]);
+const CLUE_BASE_RATE = 1/128;
+
+// Imbued heart: P(heart per superior kill) = 1 / (8 × (200 − floor((SlayerReq+55)²/125)))
+// Verified against published wiki rates (Hydras 1/160, Abyssal 1/352, Banshees 1/1288, etc.)
+function superiorSpawnRate(){ return ($("eliteCA") && $("eliteCA").checked) ? 1/150 : 1/200; }
+// Exact per-superior imbued heart drop rates from the wiki's Imbued heart page
+const HEART_DENOMS = {
+  "Crawling Hands":1376, "Cave Crawlers":1336, "Banshees":1288, "Rockslugs":1240,
+  "Cockatrice":1192, "Pyrefiends":1144, "Infernal Mages":960, "Basilisks":1024, "Bloodvelds":896, "Gryphons":888,
+  "Jellies":872, "Turoth":832, "Warped Creatures":816, "Cave Horrors":784, "Aberrant Spectres":760,
+  "Wyrms":728, "Dust Devils":680, "Kurask":600, "Gargoyles":520, "Custodian Stalkers":504,
+  "Aquanites":472, "Nechryael":440, "Drakes":368, "Abyssal Demons":352, "Dark Beasts":256,
+  "Araxytes":224, "Smoke Devils":200, "Hydras":160
+};
+function heartDenom(c){
+  if(HEART_DENOMS[c.name]) return HEART_DENOMS[c.name];
+  // Venators' superior isn't on the wiki yet; fall back to the official formula
+  return 8 * (200 - Math.floor(Math.pow(c.lvl + 55, 2) / 125));
+}
+
+// XP / time / drop estimates for a rolled task (uses the task's kill method)
+// Direction of task-length preference (shared by the quantity Elo adjustment and bracelets):
+// good tasks (>1000 Elo) want fewer kills only when naturally short; bad tasks always want fewer.
+// A task's base hours per expected heart (no modifiers or bracelets): using the
+// default kill method, superior spawn rate and the creature's heart drop rate.
+// Bracelets scale kills and time by the same factor, so they never change h/heart.
+function baseHoursPerHeart(c){
+  const rate = methodRate(c, defaultMethod(c));
+  const heartsPerHour = rate * superiorSpawnRate() / heartDenom(c);
+  return heartsPerHour > 0 ? 1 / heartsPerHour : Infinity;
+}
+// Hours per heart for an actual offer, including its rolled Superior Unique modifier
+// and chosen kill method (still bracelet-independent, so no circular dependency).
+function offerHoursPerHeart(o){
+  const rate = methodRate(o.c, o.method || defaultMethod(o.c));
+  const supMult = o.mod && o.mod.type === "superior" ? 1 + o.mod.value/100 : 1;
+  const heartsPerHour = rate * superiorSpawnRate() * supMult / heartDenom(o.c);
+  return heartsPerHour > 0 ? 1 / heartsPerHour : Infinity;
+}
+// Direction of task-length preference, shared by the quantity Elo adjustment and
+// bracelets: efficient heart tasks (< 75 h/heart) are worth extending, so more
+// kills is good; everything slower is worth shortening. Uses the offer's modified
+// h/heart when a full offer is available, else the creature's base rate.
+function fewerKillsGood(cOrOffer){
+  const hph = (cOrOffer && cOrOffer.c) ? offerHoursPerHeart(cOrOffer) : baseHoursPerHeart(cOrOffer);
+  return hph >= 75;
+}
+
+// Bracelet choice per task, following the same direction:
+// Slaughter (extend, x4/3 kills) on efficient heart tasks (<75 h/heart after the
+// rolled Superior modifier); Expeditious (shorten, x0.8 kills) on everything slower.
+function braceletFor(o){
+  if(fewerKillsGood(o)) return $("braceletExp").checked ? "expeditious" : null;
+  return $("braceletSla").checked ? "slaughter" : null;
+}
+
+function taskStats(o){
+  const mult = o.mod.type === "xp" ? 1 + o.mod.value/100 : 1;
+  // Bracelets change actual kills per assigned count; XP, time, superiors and clues all follow actual kills
+  const bracelet = braceletFor(o);
+  const killMult = bracelet === "slaughter" ? 4/3 : bracelet === "expeditious" ? 0.8 : 1;
+  const kills = o.finalQty * killMult;
+  const xp = Math.round(kills * o.c.xpk * mult);
+  const rate_kph = methodRate(o.c, o.method || defaultMethod(o.c));
+  // Combat time plus a flat 2-minute overhead for choosing the task and travelling
+  const TASK_OVERHEAD_HOURS = 2 / 60;
+  const hours = kills / rate_kph + TASK_OVERHEAD_HOURS;
+  // Expected imbued hearts: actual kills × P(superior) × P(heart), boosted by superior unique modifier
+  const supMult = o.mod.type === "superior" ? 1 + o.mod.value/100 : 1;
+  const hearts = kills * superiorSpawnRate() * (1/heartDenom(o.c)) * supMult;
+  // Expected extra clues from a clue modifier (above the base rate)
+  let clue = null;
+  if(o.mod.type === "clue"){
+    clue = {
+      tier: CLUE_TIER_EASY.has(o.c.name) ? "easy" : CLUE_TIER_MEDIUM.has(o.c.name) ? "medium" : "hard",
+      extra: kills * CLUE_BASE_RATE * (o.mod.value/100)
+    };
+  }
+  return { xp, hours, rate: Math.round(xp / hours), hearts, clue, bracelet, kills: Math.round(kills) };
+}
+function fmtTime(h){
+  const mins = Math.round(h*60);
+  return mins < 60 ? mins + " min" : Math.floor(mins/60) + " h " + (mins%60) + " min";
+}
+const fmtNum = n => n.toLocaleString("en-US");
+const fmtDec = (n,d=4) => n.toFixed(d);
+
+const $ = id => document.getElementById(id);
+const rint = (a,b) => a + Math.floor(Math.random()*(b-a+1));
+const rstep5 = (a,b) => { const n=Math.floor((b-a)/5)+1; return a + 5*Math.floor(Math.random()*n); };
+
+function tasksDone(){ return Math.max(0, parseInt($("tasksDone").value||0)); }
+function slayerLvl(){ return Math.min(99, Math.max(1, parseInt($("slayerLvl").value||1))); }
+
+function unlockedMods(t){
+  if(t === undefined) t = tasksDone();
+  return Object.keys(MODS).filter(k => t >= MODS[k].unlock);
+}
+
+function eligiblePool(){
+  const lvl = slayerLvl(), ven = $("venators").checked;
+  return POOL.filter(c =>
+    c.lvl <= lvl &&
+    (!c.quest || ven) &&
+    !state.blocked.includes(c.name)
+  );
+}
+
+function weightedPick(pool){
+  const total = pool.reduce((s,c)=>s+c.w,0);
+  let r = Math.random()*total;
+  for(const c of pool){ r -= c.w; if(r<=0) return c; }
+  return pool[pool.length-1];
+}
+
+function rollModifier(creature, t){
+  const avail = unlockedMods(t).filter(k => creature[MODS[k].prop] != null);
+  const k = avail[Math.floor(Math.random()*avail.length)];
+  const [a,b] = creature[MODS[k].prop];
+  return {type:k, value:rstep5(a,b)};
+}
+
+// Pure roll of one offer set at a given task count. Returns picks (with stats) or [].
+function rollSet(t){
+  const n = t >= 50 ? 3 : 2;
+  let pool = eligiblePool();
+  if(pool.length === 0) return [];
+  const picks = [];
+  pool = pool.slice();
+  while(picks.length < Math.min(n, pool.length)){
+    pool = pool.filter(x => !state.blocked.includes(x.name));
+    if(pool.length === 0) break;
+    const c = weightedPick(pool);
+    pool = pool.filter(x => x.name !== c.name); // no duplicate creatures in one set
+    const qty = rint(c.q[0], c.q[1]);
+    const mod = rollModifier(c, t);
+    const finalQty = mod.type==="quantity" ? Math.max(1, qty + mod.value) : qty;
+    const pick = {c, qty, finalQty, mod, method: defaultMethod(c), t};
+    pick.stats = taskStats(pick);
+    picks.push(pick);
+  }
+  return picks;
+}
+
+function rollOffers(){
+  const picks = rollSet(tasksDone());
+  if(picks.length === 0){
+    log("No eligible tasks at this Slayer level (check level, blocks and quest unlocks).","bad");
+    return;
+  }
+  state.offers = picks;
+  render();
+  say(picks.length===3 ? LINES.roll3 : LINES.roll);
+  log(`Mortimer offers ${picks.map(p=>p.c.name).join(" · ")}.`);
+}
+
+function chooseTask(i){
+  const o = state.offers[i];
+  const rivals = state.offers.filter((_,j)=>j!==i).map(p=>p.c.name);
+  const preElo = Math.round(eloOf(o.c.name));
+  if(rivals.length) eloMatch(o.c.name, rivals);
+  state.offers = [];
+  // Immediate completion: bank rewards, show a brief celebration, then roll the next set
+  state.xpTotal += o.stats.xp;
+  state.heartsTotal += o.stats.hearts;
+  const tl = state.timeLog[o.c.name] || (state.timeLog[o.c.name] = {tasks:0,kills:0,hours:0,xp:0,hearts:0});
+  tl.tasks += 1; tl.kills += o.stats.kills; tl.hours += o.stats.hours; tl.xp += o.stats.xp; tl.hearts += o.stats.hearts;
+  let msg = `Task complete: ${o.finalQty}× ${o.c.name}. <span class="good">+${fmtNum(o.stats.xp)} Slayer XP.</span> <span class="good">+${fmtDec(o.stats.hearts)} exp. hearts.</span>`;
+  if(o.mod.type === "points"){
+    state.pts += o.mod.value;
+    msg += ` <span class="good">+${o.mod.value} Slayer Points.</span>`;
+  }
+  $("tasksDone").value = tasksDone()+1;
+  state.completing = o;
+  render();
+  renderLedger();
+  renderEloList();
+  save();
+  say(LINES.done);
+  log(msg);
+  if(rivals.length){
+    const post = Math.round(eloOf(o.c.name));
+    log(`Elo drift: ${o.c.name} ${preElo}→${post}${post-preElo>=0?" (+"+(post-preElo)+")":" ("+(post-preElo)+")"}.`);
+  }
+  checkMilestone();
+  setTimeout(()=>{
+    state.completing = null;
+    rollOffers();
+  }, 1500);
+}
+
+// ---- Time ledger (item 2) ----
+function renderLedger(){
+  const el = $("ledger");
+  const rows = Object.entries(state.timeLog).sort((a,b)=>b[1].hours-a[1].hours);
+  if(rows.length === 0){ el.innerHTML = '<div style="color:var(--parch-dim);font-size:12px">Complete tasks to build your time ledger.</div>'; return; }
+  const tot = {tasks:0,hours:0,xp:0,hearts:0};
+  rows.forEach(([,v])=>{tot.tasks+=v.tasks;tot.hours+=v.hours;tot.xp+=v.xp;tot.hearts+=(v.hearts||0);});
+  el.innerHTML = `<table class="ledger-tbl">
+    <tr><th>Monster</th><th>Tasks</th><th>Time</th><th>% time</th><th>XP</th><th>Hearts</th><th>Hearts/hr</th></tr>
+    ${rows.map(([n,v])=>`<tr><td>${n}</td><td>${v.tasks}</td><td>${fmtTime(v.hours)}</td><td>${(100*v.hours/tot.hours).toFixed(1)}%</td><td>${fmtNum(v.xp)}</td><td>${fmtDec(v.hearts||0,2)}</td><td>${fmtDec((v.hearts||0)/v.hours,4)}</td></tr>`).join("")}
+    <tr class="tot"><td>Total</td><td>${tot.tasks}</td><td>${fmtTime(tot.hours)}</td><td>100%</td><td>${fmtNum(tot.xp)}</td><td>${fmtDec(tot.hearts,2)}</td><td>${fmtDec(tot.hearts/tot.hours,4)}</td></tr>
+  </table>`;
+}
+
+// ---- Auto-simulation (item 4): always take the Top Rated (max effective Elo) task ----
+function runSimulation(n){
+  const t0 = 0; // simulations always start from a fresh 0-task record
+  const perMonster = {}, totals = {tasks:0,kills:0,hours:0,xp:0,hearts:0,pts:0,skips:0,skipPts:0,heartPicks:0,fastPicks:0};
+  const heartPaceMax = Math.max(1, parseFloat($("simHeartMax").value) || 75);  // hours per heart
+  const fastMinutes  = Math.max(0.5, parseFloat($("simFastMin").value) || 16); // minutes
+  let completed = 0;
+  for(let i=0;i<n;i++){
+    const picks = rollSet(t0 + completed); // unlock progression tracks completed tasks, not offer sets
+    if(picks.length === 0) break;
+    // Policy: 1) best hearts/hour offer if it is on a good pace;
+    //         2) otherwise the fastest task if any is trivial;
+    //         3) otherwise skip the set.
+    let best = picks[0];
+    for(const p of picks) if(p.stats.hearts/p.stats.hours > best.stats.hearts/best.stats.hours) best = p;
+    if(best.stats.hearts / best.stats.hours >= 1 / heartPaceMax){
+      totals.heartPicks += 1;
+    } else {
+      let fastest = picks[0];
+      for(const p of picks) if(p.stats.hours < fastest.stats.hours) fastest = p;
+      if(fastest.stats.hours * 60 <= fastMinutes){
+        best = fastest;
+        totals.fastPicks += 1;
+      } else {
+        totals.skips += 1; totals.skipPts += 100;
+        continue; // set skipped: no kills, no time, no rewards
+      }
+    }
+    completed += 1;
+    const pm = perMonster[best.c.name] || (perMonster[best.c.name] = {tasks:0,hours:0,xp:0,hearts:0});
+    pm.tasks += 1; pm.hours += best.stats.hours; pm.xp += best.stats.xp; pm.hearts += best.stats.hearts;
+    totals.tasks += 1; totals.kills += best.stats.kills; totals.hours += best.stats.hours;
+    totals.xp += best.stats.xp; totals.hearts += best.stats.hearts;
+    if(best.mod.type === "points") totals.pts += best.mod.value;
+  }
+  const net = totals.pts - totals.skipPts;
+  const top = Object.entries(perMonster).sort((a,b)=>b[1].hours-a[1].hours).slice(0,10);
+  $("simResults").innerHTML = `
+    <div class="sim-head">Simulated ${fmtNum(totals.tasks + totals.skips)} offer sets · ${fmtNum(totals.heartPicks)} heart picks, ${fmtNum(totals.fastPicks)} speed picks, ${fmtNum(totals.skips)} skipped · starting from 0 tasks (modifiers unlock as the run progresses)</div>
+    <div class="sim-grid">
+      <div><span>Total time</span><b>${fmtTime(totals.hours)}</b></div>
+      <div><span>Slayer XP</span><b>${fmtNum(totals.xp)}</b></div>
+      <div><span>Overall XP/hr</span><b>${fmtNum(Math.round(totals.xp/totals.hours))}</b></div>
+      <div><span>Kills</span><b>${fmtNum(totals.kills)}</b></div>
+      <div><span>Expected hearts</span><b>${fmtDec(totals.hearts,2)}</b></div>
+      <div><span>Hours per heart</span><b>${totals.hearts > 0 ? fmtDec(totals.hours/totals.hearts,1) : "—"}</b></div>
+      <div><span>Points earned</span><b>+${fmtNum(totals.pts)}</b></div>
+      <div><span>Points spent on skips</span><b>−${fmtNum(totals.skipPts)}</b></div>
+      <div><span>Net points</span><b class="${net<0?'net-neg':''}">${net>=0?'+':''}${fmtNum(net)}</b></div>
+    </div>
+    <table class="ledger-tbl" style="margin-top:8px">
+      <tr><th>Top monsters by time</th><th>Tasks</th><th>Time</th><th>% time</th><th>XP</th><th>Hearts</th><th>Hearts/hr</th></tr>
+      ${top.map(([nm,v])=>`<tr><td>${nm}</td><td>${v.tasks}</td><td>${fmtTime(v.hours)}</td><td>${(100*v.hours/totals.hours).toFixed(1)}%</td><td>${fmtNum(v.xp)}</td><td>${fmtDec(v.hearts,2)}</td><td>${fmtDec(v.hearts/v.hours,4)}</td></tr>`).join("")}
+    </table>
+    <div style="font-size:10.5px;color:var(--parch-dim);margin-top:6px">Hypothetical run. This has no effect on your session. Policy: take the best hearts/hour offer when it beats your pace target; otherwise clear the fastest task if it is under the speed limit; otherwise skip (−100 pts). A negative net means this strategy needs an outside points income.</div>`;
+  log(`Simulated ${fmtNum(totals.tasks + totals.skips)} sets: ${fmtNum(totals.tasks)} done, ${fmtNum(totals.skips)} skipped. ${fmtTime(totals.hours)}, ${fmtNum(totals.xp)} XP, ${fmtDec(totals.hearts,2)} exp. hearts, net ${net>=0?'+':''}${fmtNum(net)} points.`);
+}
+function skipSet(){
+  if(state.pts < 100){ log("Not enough Slayer Points to skip (need 100).","bad"); return; }
+  state.pts -= 100;
+  const names = state.offers.map(o => o.c.name);
+  const pre = names.map(n => Math.round(eloOf(n)));
+  eloSkipAll(names);
+  state.offers = [];
+  renderEloList();
+  save();
+  log("Skipped the offered set. <span class='bad'>−100 Slayer Points.</span>");
+  log(`Elo drift from skip: ${names.map((n,i)=>`${n} ${pre[i]}→${Math.round(eloOf(n))}`).join(" · ")}.`);
+  rollOffers(); // straight to the next choice
+}
+
+function checkMilestone(){
+  const t = tasksDone();
+  const hits = {15:"Clue Scroll modifier unlocked!",25:"Superior Unique modifier unlocked!",40:"Slayer XP modifier unlocked!",50:"Third task choice unlocked!"};
+  if(hits[t]) log(`<span class="gold">★ ${hits[t]}</span>`);
+}
+
+// ---- blocks ----
+// Rendered separately from the main render loop so slots (and any dropdown
+// selection in progress) persist untouched when tasks are rolled or completed.
+function renderBlocks(){
+  const el = $("blocks"); el.innerHTML = "";
+  state.blocked.forEach((b,i)=>{
+    const row = document.createElement("div"); row.className="blockrow";
+    if(b){
+      row.innerHTML = `<span style="flex:1;color:var(--parch)">${b}</span>`;
+      const btn = document.createElement("button"); btn.className="small"; btn.textContent="Unblock";
+      btn.onclick = ()=>{ state.blocked[i]=null; renderBlocks(); save(); log(`Unblocked ${b}.`); };
+      row.appendChild(btn);
+    }else{
+      const sel = document.createElement("select");
+      sel.innerHTML = `<option value="">— empty slot —</option>` +
+        POOL.filter(c=>!state.blocked.includes(c.name)).map(c=>`<option>${c.name}</option>`).join("");
+      const btn = document.createElement("button"); btn.className="small"; btn.textContent="Block (−120)";
+      btn.onclick = ()=>{
+        if(!sel.value) return;
+        if(state.pts < 120){
+          const attempted = sel.value;
+          sel.value = ""; // reset so it doesn't look blocked
+          log(`<span class="bad">Cannot block ${attempted}: need 120 Slayer Points (you have ${state.pts}). Slot remains empty.</span>`);
+          return;
+        }
+        const name = sel.value;
+        state.pts -= 120; state.blocked[i]=name;
+        // Remove the newly blocked creature from any offers currently on the table
+        if(state.offers.some(o => o.c.name === name)){
+          state.offers = state.offers.filter(o => o.c.name !== name);
+          log(`${name} was withdrawn from your current task offers.`);
+        }
+        renderBlocks(); render();
+        save();
+        say(LINES.block);
+        log(`Blocked ${name}. <span class="bad">−120 Slayer Points.</span>`);
+      };
+      row.appendChild(sel); row.appendChild(btn);
+    }
+    el.appendChild(row);
+  });
+}
+
+const START_PTS = 1000;
+function renderStats(){
+  const dpts = state.pts - START_PTS;
+  $("ptsVal").textContent = `${state.pts} (${dpts>=0?'+':'\u2212'}${fmtNum(Math.abs(dpts))})`;
+  $("xpVal").textContent = fmtNum(state.xpTotal);
+  $("heartsVal").textContent = fmtDec(state.heartsTotal);
+  const hrs = Object.values(state.timeLog).reduce((s,v)=>s+v.hours,0);
+  const taskCount = Object.values(state.timeLog).reduce((s,v)=>s+v.tasks,0);
+  $("timeVal").textContent = fmtTime(hrs);
+  $("timeHr").textContent  = taskCount ? fmtTime(hrs/taskCount)+" / task" : "—";
+  $("ptsHr").textContent   = hrs ? fmtDec((state.pts-START_PTS)/hrs,1)+" net / hr" : "—";
+  $("xpHr").textContent    = hrs ? fmtNum(Math.round(state.xpTotal/hrs))+" / hr" : "—";
+  $("heartsHr").textContent= (hrs && state.heartsTotal > 0) ? fmtDec(hrs/state.heartsTotal,1)+" h / heart" : "—";
+}
+const fmtOdds = p => p > 0 ? "1/" + fmtNum(Math.round(1/p)) : "—";
+
+// ---- render ----
+function renderUnlocks(){
+  const t = tasksDone();
+  const rows = [
+    [0,"Point & Quantity modifiers"],
+    [15,"Clue Scroll modifier"],
+    [25,"Superior Unique modifier"],
+    [40,"Slayer XP modifier"],
+    [50,"Third task choice"],
+  ];
+  $("unlockList").innerHTML = rows.map(([n,txt])=>
+    `<div class="${t>=n?"on":"off"}">${t>=n?"✓":"✗"} ${txt} <span style="opacity:.6">(${n} tasks)</span></div>`
+  ).join("");
+}
+
+function render(){
+  renderStats();
+  renderUnlocks();
+
+  const offersEl = $("offers");
+  offersEl.innerHTML = "";
+  $("offerIntro").style.display = (state.offers.length||state.completing) ? "none" : "block";
+  const bestElo = state.offers.length ? Math.max(...state.offers.map(effElo)) : 0;
+  const fastOn = $("fastToggle").checked;
+  // Very fast task: <=5 min estimated, flagged at any task count
+  const isFastPick = o => fastOn && o.stats.hours * 60 <= 8;
+  // Skip suggestions belong to the fast-task toggle; never suggest skipping when any
+  // offer can be cleared in 15 minutes or less (quick tasks beat paying 100 points)
+  const anyQuick = state.offers.some(o => o.stats.hours * 60 <= 15);
+  const recommendSkip = fastOn && state.offers.length > 0 && bestElo < ELO_WEIGHTS.skipBelow && !anyQuick;
+  const skipBanner = $("skipRec");
+  if(recommendSkip){
+    skipBanner.style.display = "block";
+    skipBanner.innerHTML = `<b>Skip recommended.</b> The best option here rates only ${Math.round(bestElo)} effective Elo (below ${ELO_WEIGHTS.skipBelow}). Mortimer's ledger says none of these are worth your time. Consider spending the 100 points.`;
+  } else {
+    skipBanner.style.display = "none";
+  }
+  state.offers.forEach((o,i)=>{
+    const m = MODS[o.mod.type];
+    // Highlight every option within 50 adjusted Elo of the best (1-3 cards)
+    const isFast = isFastPick(o);
+    const isElite = effElo(o) >= eliteThreshold(); // always on, no toggle
+    const adj = eloModAdjust(o) + supBuffPenalty(o);
+    const card = document.createElement("div"); card.className = "card" + (isFast ? " fast-pick" : "") + (isElite ? " elite-pick" : "");
+    card.innerHTML = `
+      ${(isElite || isFast) ? `<div class="flag-strip ${isElite ? "elite-strip" : "fast-strip"}">${[isElite ? "◆ S-Tier" : null, isFast ? "⚡ Fast Task" : null].filter(Boolean).join(" · ")}</div>` : ''}
+      <div class="lvl">Slayer ${o.c.lvl} · weight ${o.c.w}</div>
+      <div class="lvl">Elo ${Math.round(eloOf(o.c.name))}${adj ? ` <span class="${adj>0?'eadj-up':'eadj-dn'}">(${adj>0?'+':''}${adj})</span>` : ''}</div>
+      <div class="name">${o.c.name}</div>
+      <div class="qty"><b>${o.finalQty}</b> assigned
+        ${o.mod.type==="quantity" ? `<span class="adj">(${o.qty} ${o.mod.value>0?"+":""}${o.mod.value})</span>` : ""}
+      </div>
+      ${o.stats.bracelet ? `<div class="bracelet-note">≈${fmtNum(o.stats.kills)} kills with ${o.stats.bracelet === "slaughter" ? "Slaughter" : "Expeditious"}</div>` : ''}
+      <div class="mod ${m.cls}">
+        <span class="modname">Mortifier · ${m.label}</span>
+        <span class="modval">${m.fmt(o.mod.value)}</span>
+      </div>
+      <div class="stats">
+        <div><span>Method</span><span class="method-slot" data-i="${i}"></span></div>
+        <div><span>Total Slayer XP</span><b>${fmtNum(o.stats.xp)}</b></div>
+        <div><span>Est. time</span><b>${fmtTime(o.stats.hours)}</b></div>
+        <div><span>Effective XP/hr</span><b>${fmtNum(o.stats.rate)}</b></div>
+        <div><span>Heart odds</span><b class="${o.mod.type==="superior" ? "heartboost" : ""}">${fmtOdds(o.stats.hearts)}</b></div>
+        <div><span>Hours per heart</span><b class="${o.mod.type==="superior" ? "heartboost" : ""}">${fmtDec(o.stats.hours / o.stats.hearts, 1)} h</b></div>
+      </div>`;
+    // Kill-method selector (only shown when the creature has multiple methods)
+    const slot = card.querySelector('.method-slot');
+    const methods = methodsOf(o.c);
+    if(Object.keys(methods).length > 1){
+      const sel = document.createElement("select");
+      sel.className = "method-sel";
+      sel.innerHTML = Object.keys(methods).map(k=>`<option value="${k}"${(o.method||defaultMethod(o.c))===k?" selected":""}>${METHOD_LABELS[k]} (${methods[k]}/hr)</option>`).join("");
+      sel.onchange = ()=>{ o.method = sel.value; o.stats = taskStats(o); render(); };
+      slot.appendChild(sel);
+    } else {
+      slot.innerHTML = `<b>${METHOD_LABELS.kph} (${methods.kph}/hr)</b>`;
+    }
+    const btn = document.createElement("button");
+    btn.className="primary pick"; btn.textContent="Accept task";
+    btn.onclick = ()=>chooseTask(i);
+    card.appendChild(btn);
+    offersEl.appendChild(card);
+  });
+
+  const cw = $("currentWrap"); cw.innerHTML = "";
+  if(state.completing){
+    const o = state.completing;
+    const d = document.createElement("div"); d.className="complete-banner";
+    d.innerHTML = `
+      <div class="cb-title">Task Complete!</div>
+      <div class="cb-task">${o.finalQty}× ${o.c.name}</div>
+      <div class="cb-rewards">
+        <span>+${fmtNum(o.stats.xp)} Slayer XP</span>
+        <span>+${fmtDec(o.stats.hearts)} exp. hearts</span>
+        ${o.mod.type==="points" ? `<span>+${o.mod.value} Slayer Points</span>` : ""}
+      </div>`;
+    cw.appendChild(d);
+  }
+
+  $("rollBtn").disabled = !!state.completing || state.offers.length>0;
+  $("rollBtn").classList.toggle("attn", state.offers.length===0 && !state.completing);
+  $("skipBtn").disabled = state.offers.length===0 || !!state.completing;
+  $("skipBtn").classList.toggle("attn", recommendSkip && !state.completing);
+}
+
+function log(msg, cls){
+  const el = $("log");
+  const d = document.createElement("div");
+  if(cls) d.className = cls;
+  d.innerHTML = msg;
+  el.prepend(d);
+}
+
+// ---- Elo weights editor (item 6) ----
+const WEIGHT_DEFS = [
+  ["superiorPerPct", "Superior, Elo/% (×heart rate)"],
+  ["perPoint",       "Points, Elo per pt"],
+  ["xpPerPct",       "XP, Elo per %"],
+  ["cluePerPct",     "Clue, Elo per %"],
+  ["qtyMax",         "Quantity, max ±Elo"],
+  ["skipBelow",      "Skip if best Elo below"],
+];
+function renderWeights(){
+  const g = $("weightsGrid"); g.innerHTML = "";
+  WEIGHT_DEFS.forEach(([key,label])=>{
+    const row = document.createElement("div"); row.className = "wt-row";
+    row.innerHTML = `<span>${label}</span>`;
+    const inp = document.createElement("input");
+    inp.type = "number"; inp.step = "0.5"; inp.value = ELO_WEIGHTS[key];
+    inp.oninput = ()=>{ ELO_WEIGHTS[key] = parseFloat(inp.value)||0; save(); render(); };
+    row.appendChild(inp); g.appendChild(row);
+  });
+}
+
+// ---- Kill rates editor (item 1) ----
+function renderRates(){
+  const el = $("ratesTable"); el.innerHTML = "";
+  [...POOL].sort((a,b)=>a.name.localeCompare(b.name)).forEach(c=>{
+    const methods = { kph: c.kph }; if(c.aoe) methods.aoe = c.aoe; if(c.cannon) methods.cannon = c.cannon;
+    Object.keys(methods).forEach(mk=>{
+      const row = document.createElement("div"); row.className = "wt-row";
+      const label = Object.keys(methods).length>1 ? `${c.name} · ${METHOD_LABELS[mk]}` : c.name;
+      row.innerHTML = `<span>${label}</span>`;
+      const inp = document.createElement("input");
+      inp.type = "number"; inp.min = 1;
+      inp.value = (RATE_EDITS[c.name] && RATE_EDITS[c.name][mk]) || methods[mk];
+      inp.oninput = ()=>{
+        const v = parseInt(inp.value);
+        if(!v || v < 1) return;
+        (RATE_EDITS[c.name] || (RATE_EDITS[c.name] = {}))[mk] = v;
+        state.offers.forEach(o=>{ o.stats = taskStats(o); });
+        save(); render();
+      };
+      row.appendChild(inp); el.appendChild(row);
+    });
+  });
+}
+
+function renderEloSource(){
+  const el = $("eloSource");
+  el.textContent = ELO_SOURCE;
+  el.style.display = ELO_SOURCE ? "block" : "none";
+}
+function renderEloList(){
+  rebuildRanking();
+  const el = $("eloList"); el.innerHTML = "";
+  ELO_RANKING.forEach((r,i)=>{
+    const row = document.createElement("div");
+    row.className = "row";
+    row.innerHTML = `<span class="rk">${i+1}</span><span class="nm">${r.name}</span>`;
+    const inp = document.createElement("input");
+    inp.type = "number"; inp.className = "elo-inp"; inp.value = Math.round(r.elo);
+    inp.oninput = ()=>{
+      const v = parseFloat(inp.value);
+      if(isNaN(v)) return;
+      ELO_LIVE[r.name] = v;
+      rebuildRanking(); renderEloSource(); save(); render(); // live offers/skip logic; list re-sorts on blur
+    };
+    inp.onchange = ()=> renderEloList(); // re-sort once editing finishes
+    row.appendChild(inp);
+    el.appendChild(row);
+  });
+  renderEloSource();
+}
+
+
+$("rollBtn").onclick = rollOffers;
+$("skipBtn").onclick = skipSet;
+$("simBtn100").onclick = ()=>runSimulation(100);
+$("simBtn").onclick = ()=>runSimulation(1000);
+$("simBtn10k").onclick = ()=>runSimulation(10000);
+$("resetBtn").onclick = ()=>{ if(confirm("Reset all saved progress, weights and rate edits?")) resetSave(); };
+$("methodPref").addEventListener("change", ()=>{
+  state.offers.forEach(o=>{ o.method = undefined; o.stats = taskStats(o); });
+  save(); render();
+});
+$("advToggle").addEventListener("change", ()=>{
+  document.body.classList.toggle("advanced", $("advToggle").checked);
+  save();
+});
+$("eloDefaultsBtn").onclick = ()=>{
+  ELO_LIVE = Object.assign({}, ELO_DEFAULTS);
+  renderEloList(); save(); render();
+  log("Task Elos restored to defaults (drift and edits cleared).");
+};
+["slayerLvl","tasksDone","venators","eliteCA","fastToggle","braceletExp","braceletSla","simHeartMax","simFastMin"].forEach(id => $(id).addEventListener("input", ()=>{
+  state.offers.forEach(o=>{ o.stats = taskStats(o); });
+  save(); render();
+}));
+
+loadSave();
+document.body.classList.toggle("advanced", $("advToggle").checked);
+render();
+renderBlocks();
+renderLedger();
+renderWeights();
+renderRates();
+renderEloList();
+$("saveNote").textContent = storageOK
+  ? "Progress auto-saves in this browser."
+  : "Storage unavailable here. Progress lasts this session only.";
+log("Welcome to Wyrmscraig Caverns. Requirements: 100 Combat & 70 Slayer, or 99 Slayer.");
+</script>
+</body>
+</html>
